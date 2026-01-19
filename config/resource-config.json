@@ -1,0 +1,19 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": ".*\\.qml$"
+      },
+      {
+        "pattern": ".*\\.clj$"
+      },
+      {
+        "pattern": ".*\\.cljc$"
+      },
+      {
+        "pattern": "clojure/.*"
+      }
+    ]
+  }
+}
+

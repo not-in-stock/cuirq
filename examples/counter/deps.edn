@@ -1,0 +1,11 @@
+{:paths ["src" "resources" "../../clj/src"]
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/data.json {:mvn/version "2.4.0"}
+        nrepl/nrepl {:mvn/version "1.0.0"}
+        cider/cider-nrepl {:mvn/version "0.42.1"}}
+ 
+ :aliases
+ {:dev {:jvm-opts ["-Djava.library.path=../../build/lib"]}
+  
+  :run {:main-opts ["-m" "counter.core"]}}}
+

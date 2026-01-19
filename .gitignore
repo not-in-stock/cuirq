@@ -1,0 +1,41 @@
+# Nix
+result
+result-*
+
+# Build artifacts
+build/
+target/
+out/
+*.o
+*.so
+*.dylib
+*.a
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Clojure
+.cpcache/
+.nrepl-port
+.lsp/
+.clj-kondo/
+
+# Java
+*.class
+hs_err_pid*
+
+# GraalVM
+*.build_artifacts.txt
+native-image-config/generated/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local overrides
+.envrc.local

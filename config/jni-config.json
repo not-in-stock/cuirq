@@ -1,0 +1,41 @@
+[
+  {
+    "name": "qml.Bridge",
+    "methods": [
+      {
+        "name": "initialize",
+        "parameterTypes": ["[Ljava.lang.String;"]
+      },
+      {
+        "name": "loadQml",
+        "parameterTypes": ["java.lang.String"]
+      },
+      {
+        "name": "setContextProperty",
+        "parameterTypes": ["java.lang.String", "java.lang.String"]
+      },
+      {
+        "name": "exec",
+        "parameterTypes": []
+      },
+      {
+        "name": "quit",
+        "parameterTypes": []
+      },
+      {
+        "name": "registerSignalHandler",
+        "parameterTypes": ["java.lang.String", "qml.Bridge$SignalHandler"]
+      }
+    ]
+  },
+  {
+    "name": "qml.Bridge$SignalHandler",
+    "methods": [
+      {
+        "name": "handle",
+        "parameterTypes": ["[Ljava.lang.String;"]
+      }
+    ]
+  }
+]
+
