@@ -11,11 +11,13 @@ basic counter application demonstrating cuirq features.
 
 ## quick start
 
+**Using Babashka**
 ```bash
-./run.sh
+# From project root
+bb run counter
 ```
 
-this will:
+Both commands will:
 1. build c++ bridge (if needed)
 2. start the counter app
 3. launch nrepl server on port 7888

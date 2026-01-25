@@ -83,19 +83,17 @@ curl -L https://nixos.org/nix/install | sh
 git clone https://github.com/YOUR_USERNAME/cuirq.git
 cd cuirq
 
-# With Nix
+# Enter Nix environment (provides Qt6, GraalVM, Babashka, etc.)
 nix develop
 
 # Build C++ bridge
-cmake -B build -G Ninja
-cmake --build build
+bb build
 
 # Run counter example
-cd examples/counter
-./run.sh
+bb run counter
 ```
 
-See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed tutorial.
+See [QUICKSTART.md](QUICKSTART.md) for all available commands and [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed tutorial.
 
 ## Documentation
 
@@ -143,7 +141,13 @@ See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed tutorial.
 ## Building Native Image
 
 ```bash
-cmake -B build -G Ninja && cmake --build build
+# Build C++ bridge first
+bb build
+
+# Switch to GraalVM environment
+nix develop .#graalvm
+
+# Build native image
 cd examples/counter
 ./build-native.sh
 ./counter-native

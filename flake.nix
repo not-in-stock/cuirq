@@ -60,6 +60,7 @@
           ripgrep # Fast code search
           jq # JSON processing (for JNI configs)
           clojure-lsp # Clojure language server
+          babashka # Task runner for Clojure
         ];
 
         # Base JVM setup (Temurin for development)

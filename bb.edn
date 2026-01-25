@@ -1,0 +1,101 @@
+{:min-bb-version "1.3.0"
+
+ :paths ["scripts"]
+
+ :tasks
+ {;; Build C++ bridge
+  build
+  {:doc "Build C++ bridge library and Java classes"
+   :task (do
+           (println "Building C++ bridge...")
+           (shell "cmake -B build -G Ninja")
+           (shell "cmake --build build")
+           (println "C++ bridge built")
+
+           (println "\n Compiling Java classes...")
+           (shell "mkdir -p build/classes")
+           (shell "javac --release 21 -d build/classes java/qml/Bridge.java")
+           (println "Java classes compiled")
+           (println "\n Build completed successfully"))}
+
+  ;; Clean build artifacts
+  clean
+  {:doc "Clean build artifacts"
+   :task (do
+           (println "Cleaning build directory...")
+           (shell "rm -rf build")
+           (println "Build directory cleaned"))}
+
+  ;; Run example applications
+  run
+  {:doc "Run an example: bb run <example-name>"
+   :override-builtin true
+   :requires ([babashka.fs :as fs])
+   :task (let [example (first *command-line-args*)
+               examples-dir "examples"
+               example-dir (str examples-dir "/" example)]
+           (when-not example
+             (println "Usage: bb run <example-name>")
+             (println "\nAvailable examples:")
+             (doseq [dir (fs/list-dir examples-dir)]
+               (when (fs/directory? dir)
+                 (println "  -" (fs/file-name dir))))
+             (System/exit 1))
+
+           (when-not (fs/exists? example-dir)
+             (println (str "Error: Example '" example "' not found"))
+             (System/exit 1))
+
+           ;; Ensure C++ bridge is built
+           (when-not (or (fs/exists? "build/lib/libqmlbridge.dylib")
+                         (fs/exists? "build/lib/libqmlbridge.so"))
+             (println "C++ bridge not found. Building...")
+             (shell "bb build"))
+
+           (println (str "Starting " example " example..."))
+           (println "")
+
+           ;; Run with absolute paths from project root
+           (let [project-root (System/getProperty "user.dir")
+                 lib-path (str project-root "/build/lib")
+                 classes-path (str project-root "/build/classes")
+                 os-name (System/getProperty "os.name")
+                 is-macos (re-find (re-pattern "(?i)mac") os-name)
+                 ;; macOS needs -XstartOnFirstThread for Qt GUI
+                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")]
+             (shell {:dir example-dir}
+                    (str "clj "
+                         macos-flag
+                         "-J-Djava.library.path=" lib-path " "
+                         "-Sdeps '{:paths [\"" classes-path "\"]}' "
+                         "-M:run"))))}
+
+  ;; Start nREPL server
+  nrepl
+  {:doc "Start nREPL server on port 7888"
+   :task (shell "clj -M:dev -m nrepl.cmdline --port 7888 --middleware '[cider.nrepl/cider-middleware]'")}
+
+  ;; Development REPL with example loaded
+  dev
+  {:doc "Start development REPL with counter example: bb dev <example-name>"
+   :requires ([babashka.fs :as fs])
+   :task (let [example (or (first *command-line-args*) "counter")
+               example-dir (str "examples/" example)]
+           (when-not (fs/exists? example-dir)
+             (println (str "Error: Example '" example "' not found"))
+             (System/exit 1))
+
+           (println (str "Starting REPL with " example " example loaded..."))
+
+           (let [project-root (System/getProperty "user.dir")
+                 lib-path (str project-root "/build/lib")
+                 classes-path (str project-root "/build/classes")
+                 os-name (System/getProperty "os.name")
+                 is-macos (re-find (re-pattern "(?i)mac") os-name)
+                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")]
+             (shell {:dir example-dir}
+                    (str "clj "
+                         macos-flag
+                         "-J-Djava.library.path=" lib-path " "
+                         "-Sdeps '{:paths [\"" classes-path "\"]}' "
+                         "-M:dev:nrepl"))))}}}

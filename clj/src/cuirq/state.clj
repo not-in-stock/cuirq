@@ -73,10 +73,6 @@
   [key]
   (remove-watch app-state key))
 
-(update-state! update :count inc)
-
-;; (set-state! {:count 200 :message "Hey it finally works!"})
-
 (comment
   ;; Usage examples
 
