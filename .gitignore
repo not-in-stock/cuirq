@@ -39,3 +39,6 @@ Thumbs.db
 
 # Local overrides
 .envrc.local
+
+# Nix shell history (project-local)
+.history/

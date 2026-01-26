@@ -84,6 +84,7 @@ git clone https://github.com/YOUR_USERNAME/cuirq.git
 cd cuirq
 
 # Enter Nix environment (provides Qt6, GraalVM, Babashka, etc.)
+# Automatically uses your current shell (fish/zsh/bash) with isolated history
 nix develop
 
 # Build C++ bridge
@@ -93,11 +94,12 @@ bb build
 bb run counter
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) for all available commands and [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed tutorial.
+See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for detailed tutorial and [docs/NIX_SHELL.md](docs/NIX_SHELL.md) for shell integration.
 
 ## Documentation
 
 - **[Getting Started Guide](docs/GETTING_STARTED.md)** - Step-by-step tutorial
+- **[Nix Shell Integration](docs/NIX_SHELL.md)** - Using your shell with isolated history
 - **[Roadmap](docs/ROADMAP.md)** - Planned features and optimizations
 - **[Counter Example](examples/counter/)** - Working example with hot-reload
 
