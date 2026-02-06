@@ -33,34 +33,34 @@ Item {
         }
     }
 
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
         spacing: 0
 
-        Toolbar {
-            Layout.fillWidth: true
-            canGoBack: root.canGoBack
-            canGoForward: root.canGoForward
-            breadcrumbs: root.breadcrumbs
-            viewMode: root.viewMode
-            onViewModeRequested: (mode) => root.viewMode = mode
-            onThemeCycled: {
-                let next = Theme.themeMode === "system" ? "light"
-                         : Theme.themeMode === "light"  ? "dark"
-                         : "system"
-                Theme.themeMode = next
-                signalForwarder.emitSignal("themeChanged", [next])
-            }
+        Sidebar {
+            Layout.fillHeight: true
+            currentPath: root.currentPath
         }
 
-        RowLayout {
+        ColumnLayout {
             Layout.fillWidth: true
             Layout.fillHeight: true
             spacing: 0
 
-            Sidebar {
-                Layout.fillHeight: true
-                currentPath: root.currentPath
+            Toolbar {
+                Layout.fillWidth: true
+                canGoBack: root.canGoBack
+                canGoForward: root.canGoForward
+                breadcrumbs: root.breadcrumbs
+                viewMode: root.viewMode
+                onViewModeRequested: (mode) => root.viewMode = mode
+                onThemeCycled: {
+                    let next = Theme.themeMode === "system" ? "light"
+                             : Theme.themeMode === "light"  ? "dark"
+                             : "system"
+                    Theme.themeMode = next
+                    signalForwarder.emitSignal("themeChanged", [next])
+                }
             }
 
             // Animated view container
@@ -113,12 +113,12 @@ Item {
 
                 Component.onCompleted: gridFadeIn.start()
             }
-        }
 
-        StatusBar {
-            Layout.fillWidth: true
-            itemCount: root.itemCount
-            currentPath: root.currentPath
+            StatusBar {
+                Layout.fillWidth: true
+                itemCount: root.itemCount
+                currentPath: root.currentPath
+            }
         }
     }
 }
