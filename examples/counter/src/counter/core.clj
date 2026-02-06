@@ -80,3 +80,5 @@
             (catch Exception e
               (println "[Clojure] Warning: Error stopping nREPL:" (.getMessage e)))))
         (println "[Clojure] Bye! \n")))))
+
+(state/set-state! {:count 2 :message "Hello cuirq!"})

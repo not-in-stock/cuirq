@@ -11,8 +11,11 @@
 #include <QHash>
 #include <QObject>
 #include <QVariantList>
+#include <QFileInfo>
+#include <QDir>
 #include <iostream>
 #include <vector>
+#include <dlfcn.h>
 
 // Signal forwarder for Panama FFM.
 // Exposes a Q_INVOKABLE emitSignal() to QML, forwards via C function pointer.
@@ -64,12 +67,29 @@ static QGuiApplication* g_app = nullptr;
 static QQmlApplicationEngine* g_engine = nullptr;
 static PanamaSignalForwarder* g_signalForwarder = nullptr;
 static QmlWatcher* g_qmlWatcher = nullptr;
+static StateNotifier* g_stateNotifier = nullptr;
 static StateObject* g_state = nullptr;
 static QHash<QString, JvmListModel*> g_models;
+static bool g_shellLoaded = false;
+static QString g_contentUrl;
 
 // Command-line arguments storage (must persist for QGuiApplication lifetime)
 static std::vector<char*> g_argv_storage;
 static int g_argc = 0;
+
+// Find shell.qml relative to libqmlbridge
+static QString findShellQmlPath() {
+    Dl_info info;
+    if (dladdr(reinterpret_cast<void*>(cuirq::initialize), &info) && info.dli_fname) {
+        QFileInfo libFile(QString::fromUtf8(info.dli_fname));
+        QString projectRoot = libFile.absolutePath() + "/../..";
+        QString shellPath = QDir(projectRoot).absoluteFilePath("qml/shell.qml");
+        if (QFileInfo::exists(shellPath)) {
+            return shellPath;
+        }
+    }
+    return {};
+}
 
 namespace cuirq {
 
@@ -101,10 +121,12 @@ bool initialize(int argc, char* argv[]) {
     g_qmlWatcher = new QmlWatcher(g_engine, g_engine);
     std::cout << "[CPP] QmlWatcher created (hot-reload enabled)" << std::endl;
 
-    // Reactive state
-    g_state = new StateObject(g_engine);
+    // Reactive state + notifier (plain QObject so QML can see its signals)
+    g_stateNotifier = new StateNotifier(g_engine);
+    g_state = new StateObject(g_stateNotifier, g_engine);
     g_engine->rootContext()->setContextProperty("state", g_state);
-    std::cout << "[CPP] StateObject created and exposed as 'state'" << std::endl;
+    g_engine->rootContext()->setContextProperty("stateNotifier", g_stateNotifier);
+    std::cout << "[CPP] StateObject + StateNotifier exposed to QML" << std::endl;
 
     return true;
 }
@@ -118,6 +140,7 @@ void shutdown() {
     g_engine = nullptr;
     g_signalForwarder = nullptr; // owned by engine
     g_qmlWatcher = nullptr;     // owned by engine
+    g_stateNotifier = nullptr;  // owned by engine
     g_state = nullptr;          // owned by engine
 
     delete g_app;
@@ -158,19 +181,39 @@ bool load_qml(const char* path) {
         return false;
     }
 
-    std::cout << "[CPP] Loading QML from: " << path << std::endl;
-    QUrl qmlUrl = QUrl::fromLocalFile(QString::fromUtf8(path));
-    g_engine->load(qmlUrl);
+    QString contentPath = QString::fromUtf8(path);
+    QUrl contentUrl = QUrl::fromLocalFile(contentPath);
+    g_contentUrl = contentUrl.toString();
 
-    if (g_engine->rootObjects().isEmpty()) {
-        std::cerr << "[CPP] ERROR: Failed to load QML file: " << path << std::endl;
-        return false;
+    if (!g_shellLoaded) {
+        // First load: set content URL and load the shell
+        QString shellPath = findShellQmlPath();
+        if (shellPath.isEmpty()) {
+            std::cerr << "[CPP] ERROR: shell.qml not found" << std::endl;
+            return false;
+        }
+
+        std::cout << "[CPP] Loading shell from: " << shellPath.toStdString() << std::endl;
+        std::cout << "[CPP] Content URL: " << contentPath.toStdString() << std::endl;
+
+        g_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
+        g_engine->load(QUrl::fromLocalFile(shellPath));
+
+        if (g_engine->rootObjects().isEmpty()) {
+            std::cerr << "[CPP] ERROR: Failed to load shell.qml" << std::endl;
+            return false;
+        }
+
+        g_shellLoaded = true;
+        std::cout << "[CPP] Shell + content loaded successfully" << std::endl;
+    } else {
+        // Subsequent loads: just update the content URL (Loader picks it up)
+        std::cout << "[CPP] Updating content URL: " << contentPath.toStdString() << std::endl;
+        g_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
     }
 
-    std::cout << "[CPP] QML loaded successfully" << std::endl;
-
     if (g_qmlWatcher) {
-        g_qmlWatcher->watchFile(QString::fromUtf8(path));
+        g_qmlWatcher->watchFile(contentPath);
     }
 
     return true;

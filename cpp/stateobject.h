@@ -1,32 +1,38 @@
 #ifndef STATEOBJECT_H
 #define STATEOBJECT_H
 
+#include <QObject>
 #include <QQmlPropertyMap>
 #include <QString>
 #include <QVariant>
 
-/**
- * StateObject - Reactive state container for QML.
- *
- * Uses QQmlPropertyMap which provides automatic property change notifications.
- * This is the proper Qt way to do reactive data binding with dynamic properties.
- */
+// Plain QObject notifier — QML can always see signals on plain QObjects.
+// QQmlPropertyMap subclasses have dynamic meta-objects that hide custom signals in Qt 6.10.
+class StateNotifier : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit StateNotifier(QObject *parent = nullptr) : QObject(parent) {}
+
+signals:
+    void propChanged(const QString& key, const QVariant& value);
+};
+
 class StateObject : public QQmlPropertyMap
 {
     Q_OBJECT
 
 public:
-    explicit StateObject(QObject *parent = nullptr);
+    explicit StateObject(StateNotifier* notifier, QObject *parent = nullptr);
     ~StateObject() override;
 
-    // Set a property value (emits valueChanged signal automatically)
     Q_INVOKABLE void setProp(const QString& name, const QVariant& value);
-
-    // Get a property value
     Q_INVOKABLE QVariant getProp(const QString& name) const;
-
-    // Check if property exists
     Q_INVOKABLE bool hasProp(const QString& name) const;
+
+private:
+    StateNotifier* m_notifier;
 };
 
 #endif // STATEOBJECT_H

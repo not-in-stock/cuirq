@@ -83,59 +83,33 @@ void QmlWatcher::reloadQml(const QString& path)
     }
 
     qDebug() << "[CPP] QmlWatcher: ========================================";
-    qDebug() << "[CPP] QmlWatcher: RELOADING QML";
+    qDebug() << "[CPP] QmlWatcher: RELOADING CONTENT";
     qDebug() << "[CPP] QmlWatcher: ========================================";
 
-    // Step 1: Save current context properties (to preserve state)
-    qDebug() << "[CPP] QmlWatcher: [1/5] Saving context properties...";
-    saveContextProperties();
+    QQmlContext* ctx = m_engine->rootContext();
+    QUrl contentUrl = QUrl::fromLocalFile(path);
 
-    // Step 2: Delete old root objects (to close existing windows)
-    qDebug() << "[CPP] QmlWatcher: [2/5] Closing old windows...";
-    QList<QObject*> oldRoots = m_engine->rootObjects();
-    for (QObject* obj : oldRoots) {
-        qDebug() << "[CPP] QmlWatcher: Deleting old root object:" << obj;
-        obj->deleteLater();
-    }
+    // Step 1: Unload content (set Loader source to empty)
+    qDebug() << "[CPP] QmlWatcher: [1/3] Unloading content...";
+    ctx->setContextProperty("_cuirq_content_url", QUrl());
 
-    // Step 3: Clear component cache
-    qDebug() << "[CPP] QmlWatcher: [3/5] Clearing component cache...";
-    m_engine->clearComponentCache();
+    // Step 2: Clear cache + reload on next event loop tick
+    // (Loader must process the empty URL before we set the new one)
+    QTimer::singleShot(0, this, [this, contentUrl]() {
+        qDebug() << "[CPP] QmlWatcher: [2/3] Clearing component cache...";
+        m_engine->clearComponentCache();
 
-    // Step 4: Reload QML
-    qDebug() << "[CPP] QmlWatcher: [4/5] Reloading QML from:" << path;
-    m_engine->load(QUrl::fromLocalFile(path));
+        qDebug() << "[CPP] QmlWatcher: [3/3] Loading content:" << contentUrl.toString();
+        m_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
 
-    if (m_engine->rootObjects().isEmpty()) {
-        qWarning() << "[CPP] QmlWatcher: Failed to reload QML!";
-        qWarning() << "[CPP] QmlWatcher: Check QML file for syntax errors";
-        return;
-    }
-
-    // Step 5: Restore context properties (they persist automatically in Qt)
-    qDebug() << "[CPP] QmlWatcher: [5/5] Context properties restored";
-    restoreContextProperties();
-
-    qDebug() << "[CPP] QmlWatcher: ========================================";
-    qDebug() << "[CPP] QmlWatcher: RELOAD COMPLETE";
-    qDebug() << "[CPP] QmlWatcher: ========================================";
+        qDebug() << "[CPP] QmlWatcher: RELOAD COMPLETE (window preserved)";
+    });
 }
 
 void QmlWatcher::saveContextProperties()
 {
-    // Note: QQmlContext doesn't provide a way to enumerate all properties
-    // So we can't automatically save them. Instead, the application should
-    // use the Bridge API to set properties, and they will be preserved
-    // through the reload because we don't destroy the engine.
-
-    // For now, this is a placeholder. In practice, context properties
-    // set via setContextProperty() persist across load() calls.
-    qDebug() << "[CPP] QmlWatcher: Context properties preserved (Qt handles this)";
 }
 
 void QmlWatcher::restoreContextProperties()
 {
-    // Context properties are automatically preserved by Qt
-    // when we call load() without destroying the engine.
-    qDebug() << "[CPP] QmlWatcher: Context properties restored automatically";
 }

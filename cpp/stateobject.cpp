@@ -1,8 +1,10 @@
 #include "stateobject.h"
 #include <QDebug>
+#include <QThread>
 
-StateObject::StateObject(QObject *parent)
+StateObject::StateObject(StateNotifier* notifier, QObject *parent)
     : QQmlPropertyMap(this, parent)
+    , m_notifier(notifier)
 {
     qDebug() << "[CPP] StateObject created (QQmlPropertyMap)";
 }
@@ -14,10 +16,19 @@ StateObject::~StateObject()
 
 void StateObject::setProp(const QString& name, const QVariant& value)
 {
-    // QQmlPropertyMap::insert() automatically emits valueChanged signal
-    // which QML will detect and update bindings
+    // Must run on Qt main thread for QML bindings to update
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, [this, name, value]() {
+            setProp(name, value);
+        }, Qt::QueuedConnection);
+        return;
+    }
+
     insert(name, value);
-    qDebug() << "[CPP] StateObject: Property" << name << "=" << value << "(signal emitted)";
+    if (m_notifier) {
+        emit m_notifier->propChanged(name, value);
+    }
+    qDebug() << "[CPP] StateObject: Property" << name << "=" << value;
 }
 
 QVariant StateObject::getProp(const QString& name) const

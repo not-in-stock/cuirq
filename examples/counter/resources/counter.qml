@@ -2,33 +2,30 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-ApplicationWindow {
-    visible: true
-    width: 500
-    height: 400
-    title: "REPL Hot-Reload Demo"
+Item {
+    id: root
 
-    // Local properties that update when state changes
+    // Window properties — shell.qml reads these
+    property string windowTitle: "cuirq Counter!!!"
+    property int windowWidth: 500
+    property int windowHeight: 400
+
     property string currentMessage: state.message || "No message"
     property int currentCount: parseInt(state.count) || 0
 
-    // Listen for state changes from QQmlPropertyMap
     Connections {
-        target: state
-        function onValueChanged(key, value) {
-            console.log("QML: State changed:", key, "=", value)
-            if (key === "message") {
-                currentMessage = value || "No message"
-            } else if (key === "count") {
-                currentCount = parseInt(value) || 0
-            }
+        target: stateNotifier
+        function onPropChanged(key, value) {
+            console.log("[QML] propChanged:", key, "=", value)
+            if (key === "message") root.currentMessage = value || "No message"
+            else if (key === "count") root.currentCount = parseInt(value) || 0
         }
     }
 
     Rectangle {
         anchors.fill: parent
         gradient: Gradient {
-            GradientStop { position: 0.0; color: "#FFee00" }
+            GradientStop { position: 0.0; color: "#007eea" }
             GradientStop { position: 1.0; color: "#764ba2" }
         }
 
@@ -57,14 +54,14 @@ ApplicationWindow {
                     spacing: 15
 
                     Text {
-                        text: currentMessage
+                        text: root.currentMessage
                         font.pixelSize: 20
                         color: "#333"
                         Layout.alignment: Qt.AlignHCenter
                     }
 
                     Text {
-                        text: "Count: " + currentCount
+                        text: "Count: " + root.currentCount
                         font.pixelSize: 36
                         font.bold: true
                         color: "#667eea"
