@@ -15,7 +15,12 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+            "graalvm-oracle"
+          ];
+        };
 
         # Platform detection
         isDarwin = pkgs.stdenv.isDarwin;
@@ -58,21 +63,16 @@
         devTools = with pkgs; [
           git
           ripgrep # Fast code search
-          jq # JSON processing (for JNI configs)
+          jq # JSON processing
           clojure-lsp # Clojure language server
           babashka # Task runner for Clojure
         ];
 
-        # Base JVM setup (Temurin for development)
-        jvmBase = with pkgs; [
-          temurin-bin-21
-          clojure
-        ];
-
-        # GraalVM setup (for native-image experiments)
-        jvmGraalVM = with pkgs; [
-          graalvmPackages.graalvm-ce
-          clojure
+        # JVM setup: GraalVM 25 (Panama FFM support)
+        graalvm25 = pkgs.graalvmPackages.graalvm-oracle_25;
+        jvmBase = [
+          graalvm25
+          (pkgs.clojure.override { jdk = graalvm25; })
         ];
 
         # Common environment variables
@@ -102,9 +102,7 @@
         mkShellHook = jdk: ''
           ${qtPlatformHook}
 
-          # JNI headers location
           export JAVA_HOME="${jdk}"
-          export JNI_INCLUDE_PATH="$JAVA_HOME/include"
 
           # Platform info
           PLATFORM="${if isDarwin then "macOS (Darwin)" else "Linux"}"
@@ -186,7 +184,7 @@
           # Note: This replaces the current bash process with user's shell
           # Your shell configs (~/.zshrc, ~/.config/fish/config.fish, etc) will be loaded
           # Exit the shell to return to the original environment
-          if [ -n "$IN_NIX_SHELL" ] && [ "$SHELL_NAME" != "bash" ]; then
+          if [ -n "$IN_NIX_SHELL" ] && [ "$SHELL_NAME" != "bash" ] && [[ $- == *i* ]]; then
             echo "Launching $SHELL_NAME..."
             echo ""
             exec "$USER_SHELL"
@@ -202,25 +200,11 @@
 
             buildInputs = qt6Packages ++ platformDeps ++ buildTools ++ devTools ++ jvmBase;
 
-            shellHook = mkShellHook pkgs.temurin-bin-21;
+            shellHook = mkShellHook graalvm25;
           }
           // commonEnv
         );
 
-        # GraalVM shell: for native-image experiments
-        devShells.graalvm = pkgs.mkShell (
-          {
-            name = "jvm-qt-research-graalvm";
-
-            buildInputs = qt6Packages ++ platformDeps ++ buildTools ++ devTools ++ jvmGraalVM;
-
-            shellHook = mkShellHook pkgs.graalvmPackages.graalvm-ce + ''
-              echo "GraalVM native-image: $(native-image --version 2>&1 | head -1 || echo 'run: gu install native-image')"
-              echo ""
-            '';
-          }
-          // commonEnv
-        );
       }
     );
 }

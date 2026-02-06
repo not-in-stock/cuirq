@@ -19,25 +19,21 @@ set(CMAKE_AUTOMOC ON)
 # Find Qt6 components
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick)
 
-# Find JNI (Java Native Interface)
-find_package(JNI REQUIRED)
-
 # Build shared library (.dylib on macOS, .so on Linux)
 add_library(qmlbridge SHARED
-    cpp/qmlbridge.cpp
-    cpp/signalforwarder.cpp
+    cpp/qt_engine.cpp
     cpp/jvmlistmodel.cpp
     cpp/qmlwatcher.cpp
     cpp/stateobject.cpp
+    cpp/panama_api.cpp
 )
 
-# Include directories for JNI headers
+# Include directories
 target_include_directories(qmlbridge PRIVATE
-    ${JNI_INCLUDE_DIRS}
     cpp
 )
 
-# Link Qt and JNI libraries
+# Link Qt libraries
 target_link_libraries(qmlbridge PRIVATE
     Qt6::Core
     Qt6::Gui
@@ -55,7 +51,5 @@ message(STATUS "=== cuirq Bridge Build Configuration ===")
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 message(STATUS "C++ standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Qt6 version: ${Qt6_VERSION}")
-message(STATUS "JNI include dirs: ${JNI_INCLUDE_DIRS}")
 message(STATUS "Library output: ${CMAKE_BINARY_DIR}/lib")
 message(STATUS "========================================")
-

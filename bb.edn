@@ -14,7 +14,7 @@
 
            (println "\n Compiling Java classes...")
            (shell "mkdir -p build/classes")
-           (shell "javac --release 21 -d build/classes java/qml/Bridge.java")
+           (shell "javac --release 25 -d build/classes java/qml/PanamaBridge.java")
            (println "Java classes compiled")
            (println "\n Build completed successfully"))}
 
@@ -62,13 +62,16 @@
                  os-name (System/getProperty "os.name")
                  is-macos (re-find (re-pattern "(?i)mac") os-name)
                  ;; macOS needs -XstartOnFirstThread for Qt GUI
-                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")]
+                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")
+                 ;; Panama FFM needs native access
+                 panama-flag "-J--enable-native-access=ALL-UNNAMED "]
              (shell {:dir example-dir}
                     (str "clj "
                          macos-flag
+                         panama-flag
                          "-J-Djava.library.path=" lib-path " "
-                         "-Sdeps '{:paths [\"" classes-path "\"]}' "
-                         "-M:run"))))}
+                         "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
+                         "-M:run:bridge"))))}
 
   ;; Start nREPL server
   nrepl
@@ -92,10 +95,12 @@
                  classes-path (str project-root "/build/classes")
                  os-name (System/getProperty "os.name")
                  is-macos (re-find (re-pattern "(?i)mac") os-name)
-                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")]
+                 macos-flag (if is-macos "-J-XstartOnFirstThread " "")
+                 panama-flag "-J--enable-native-access=ALL-UNNAMED "]
              (shell {:dir example-dir}
                     (str "clj "
                          macos-flag
+                         panama-flag
                          "-J-Djava.library.path=" lib-path " "
-                         "-Sdeps '{:paths [\"" classes-path "\"]}' "
-                         "-M:dev:nrepl"))))}}}
+                         "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
+                         "-M:dev:nrepl:bridge"))))}}}

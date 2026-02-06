@@ -1,7 +1,7 @@
 (ns cuirq.models
   "List model API for QML ListView/GridView."
   (:require [clojure.data.json :as json])
-  (:import [qml Bridge]))
+  (:import [qml PanamaBridge]))
 
 (set! *warn-on-reflection* true)
 
@@ -12,7 +12,7 @@
      (create-model! :items)
      ;; Now 'items' is available in QML"
   [model-name]
-  (Bridge/createModel (name model-name))
+  (PanamaBridge/createModel (name model-name))
   (println (str "[CLJ] Created model: " (name model-name))))
 
 (defn set-data!
@@ -32,20 +32,20 @@
      }"
   [model-name data]
   (let [json-str (json/write-str data)]
-    (Bridge/setModelData (name model-name) json-str)
+    (PanamaBridge/setModelData (name model-name) json-str)
     (println (str "[CLJ] Set data for model: " (name model-name)
                   " (" (count data) " items)"))))
 
 (defn clear!
   "Clear all items from a model."
   [model-name]
-  (Bridge/clearModel (name model-name))
+  (PanamaBridge/clearModel (name model-name))
   (println (str "[CLJ] Cleared model: " (name model-name))))
 
 (defn count-items
   "Get number of items in a model."
   [model-name]
-  (Bridge/getModelCount (name model-name)))
+  (PanamaBridge/getModelCount (name model-name)))
 
 (comment
   ;; Usage examples
