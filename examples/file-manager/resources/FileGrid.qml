@@ -3,7 +3,9 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileGrid
-    color: "#FFFFFF"
+    property bool darkMode: false
+    color: darkMode ? "#1E293B" : "#FFFFFF"
+    Behavior on color { ColorAnimation { duration: 200 } }
 
     GridView {
         id: gridView
@@ -23,13 +25,13 @@ Rectangle {
             isDir: model.isDir
             fileSize: model.size
             fileType: model.fileType
+            darkMode: fileGrid.darkMode
         }
 
         ScrollBar.vertical: ScrollBar {
             policy: ScrollBar.AsNeeded
         }
 
-        // Empty state
         Text {
             anchors.centerIn: parent
             text: "This folder is empty"

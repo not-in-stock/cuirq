@@ -15,6 +15,7 @@ Item {
     property int itemCount: 0
     property var breadcrumbs: []
     property string viewMode: "grid"
+    property bool darkMode: false
 
     Connections {
         target: stateNotifier
@@ -43,7 +44,9 @@ Item {
             canGoForward: root.canGoForward
             breadcrumbs: root.breadcrumbs
             viewMode: root.viewMode
+            darkMode: root.darkMode
             onViewModeRequested: (mode) => root.viewMode = mode
+            onThemeToggled: root.darkMode = !root.darkMode
         }
 
         RowLayout {
@@ -54,6 +57,7 @@ Item {
             Sidebar {
                 Layout.fillHeight: true
                 currentPath: root.currentPath
+                darkMode: root.darkMode
             }
 
             // Animated view container
@@ -61,13 +65,15 @@ Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 clip: true
-                color: "#FFFFFF"
+                color: root.darkMode ? "#1E293B" : "#FFFFFF"
+                Behavior on color { ColorAnimation { duration: 200 } }
 
                 FileGrid {
                     id: gridView
                     anchors.fill: parent
                     visible: root.viewMode === "grid"
                     opacity: 0
+                    darkMode: root.darkMode
                     transform: Translate { id: gridTranslate; y: 4 }
                 }
 
@@ -76,10 +82,10 @@ Item {
                     anchors.fill: parent
                     visible: root.viewMode === "list"
                     opacity: 0
+                    darkMode: root.darkMode
                     transform: Translate { id: listTranslate; y: 4 }
                 }
 
-                // Fade-in + slide-up animation (matches original mockup: 150ms ease-out)
                 ParallelAnimation {
                     id: gridFadeIn
                     NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
@@ -100,7 +106,6 @@ Item {
                     }
                 }
 
-                // Initial fade-in
                 Component.onCompleted: gridFadeIn.start()
             }
         }
@@ -109,6 +114,7 @@ Item {
             Layout.fillWidth: true
             itemCount: root.itemCount
             currentPath: root.currentPath
+            darkMode: root.darkMode
         }
     }
 }

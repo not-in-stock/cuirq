@@ -8,11 +8,12 @@ Rectangle {
     property bool isDir: false
     property string fileSize: ""
     property string fileType: "other"
+    property bool darkMode: false
 
     width: 130
     height: 140
     radius: 10
-    color: mouseArea.containsMouse ? "#F1F5F9" : "transparent"
+    color: mouseArea.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
 
     Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -35,21 +36,17 @@ Rectangle {
         anchors.topMargin: 16
         spacing: 8
 
-        // Icon
         Image {
             source: fileItem.iconSource(fileItem.fileType)
-            width: 48
-            height: 48
-            sourceSize.width: 48
-            sourceSize.height: 48
+            width: 48; height: 48
+            sourceSize.width: 48; sourceSize.height: 48
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
-        // File name
         Text {
             text: fileItem.fileName
             font.pixelSize: 12
-            color: "#334155"
+            color: fileItem.darkMode ? "#E2E8F0" : "#334155"
             width: 118
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
@@ -58,11 +55,10 @@ Rectangle {
             wrapMode: Text.WrapAtWordBoundaryOrAnywhere
         }
 
-        // File size (only for files)
         Text {
             text: fileItem.fileSize
             font.pixelSize: 11
-            color: "#94A3B8"
+            color: fileItem.darkMode ? "#64748B" : "#94A3B8"
             anchors.horizontalCenter: parent.horizontalCenter
             visible: !fileItem.isDir
         }

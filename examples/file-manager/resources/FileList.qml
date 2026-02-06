@@ -3,7 +3,9 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileList
-    color: "#FFFFFF"
+    property bool darkMode: false
+    color: darkMode ? "#1E293B" : "#FFFFFF"
+    Behavior on color { ColorAnimation { duration: 200 } }
 
     function iconSource(type) {
         switch (type) {
@@ -32,7 +34,9 @@ Rectangle {
             width: listView.width
             height: 40
             radius: 6
-            color: listMouse.containsMouse ? "#F1F5F9" : "transparent"
+            color: listMouse.containsMouse
+                ? (fileList.darkMode ? "#334155" : "#F1F5F9")
+                : "transparent"
 
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -44,28 +48,23 @@ Rectangle {
                 anchors.rightMargin: 12
                 spacing: 10
 
-                // Icon
                 Image {
                     source: fileList.iconSource(model.fileType)
-                    width: 24
-                    height: 24
-                    sourceSize.width: 24
-                    sourceSize.height: 24
+                    width: 24; height: 24
+                    sourceSize.width: 24; sourceSize.height: 24
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                // File name
                 Text {
                     text: model.name
                     font.pixelSize: 13
-                    color: "#334155"
+                    color: fileList.darkMode ? "#E2E8F0" : "#334155"
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 36
                 }
             }
 
-            // File size
             Text {
                 id: sizeText
                 anchors.right: parent.right
@@ -73,7 +72,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.isDir ? "" : model.size
                 font.pixelSize: 12
-                color: "#94A3B8"
+                color: fileList.darkMode ? "#64748B" : "#94A3B8"
             }
 
             MouseArea {
@@ -92,7 +91,6 @@ Rectangle {
             policy: ScrollBar.AsNeeded
         }
 
-        // Empty state
         Text {
             anchors.centerIn: parent
             text: "This folder is empty"

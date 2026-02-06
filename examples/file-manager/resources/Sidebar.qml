@@ -5,9 +5,11 @@ Rectangle {
     id: sidebar
 
     property string currentPath: ""
+    property bool darkMode: false
 
     width: 220
-    color: "#F8FAFC"
+    color: darkMode ? "#162032" : "#F8FAFC"
+    Behavior on color { ColorAnimation { duration: 200 } }
 
     // Right border
     Rectangle {
@@ -15,7 +17,8 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: "#E2E8F0"
+        color: darkMode ? "#334155" : "#E2E8F0"
+        Behavior on color { ColorAnimation { duration: 200 } }
     }
 
     ColumnLayout {
@@ -32,7 +35,7 @@ Rectangle {
             font.pixelSize: 11
             font.bold: true
             font.letterSpacing: 0.5
-            color: "#94A3B8"
+            color: darkMode ? "#64748B" : "#94A3B8"
             Layout.leftMargin: 10
             Layout.bottomMargin: 6
         }
@@ -56,7 +59,9 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: sidebarMouse.containsMouse ? "#E2E8F0" : "transparent"
+                color: sidebarMouse.containsMouse
+                    ? (sidebar.darkMode ? "#334155" : "#E2E8F0")
+                    : "transparent"
 
                 Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -68,17 +73,15 @@ Rectangle {
 
                     Image {
                         source: iconFile
-                        width: 20
-                        height: 20
-                        sourceSize.width: 20
-                        sourceSize.height: 20
+                        width: 20; height: 20
+                        sourceSize.width: 20; sourceSize.height: 20
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
                     Text {
                         text: label
                         font.pixelSize: 13
-                        color: "#334155"
+                        color: sidebar.darkMode ? "#CBD5E1" : "#334155"
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
