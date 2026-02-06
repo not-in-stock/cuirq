@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -42,31 +43,17 @@ Item {
             currentPath: root.currentPath
         }
 
-        ColumnLayout {
+        Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            spacing: 0
 
-            Toolbar {
-                Layout.fillWidth: true
-                canGoBack: root.canGoBack
-                canGoForward: root.canGoForward
-                breadcrumbs: root.breadcrumbs
-                viewMode: root.viewMode
-                onViewModeRequested: (mode) => root.viewMode = mode
-                onThemeCycled: {
-                    let next = Theme.themeMode === "system" ? "light"
-                             : Theme.themeMode === "light"  ? "dark"
-                             : "system"
-                    Theme.themeMode = next
-                    signalForwarder.emitSignal("themeChanged", [next])
-                }
-            }
-
-            // Animated view container
+            // Content area — extends behind toolbar, stops above status bar
             Rectangle {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                id: contentArea
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: statusBar.top
                 clip: true
                 color: Theme.background
                 Behavior on color { ColorAnimation { duration: Theme.animDuration } }
@@ -114,8 +101,68 @@ Item {
                 Component.onCompleted: gridFadeIn.start()
             }
 
+            // Toolbar blur background — captures content behind toolbar and blurs it
+            Item {
+                id: toolbarBlur
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: toolbar.height
+                z: 1
+                clip: true
+
+                ShaderEffectSource {
+                    id: toolbarBlurSource
+                    // Full contentArea size — no sourceRect, avoids scaling artifacts
+                    width: contentArea.width
+                    height: contentArea.height
+                    sourceItem: contentArea
+                    visible: false
+                }
+
+                FastBlur {
+                    width: contentArea.width
+                    height: contentArea.height
+                    source: toolbarBlurSource
+                    radius: 64
+                    cached: true
+                    transparentBorder: false
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Theme.darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
+                                          : Qt.rgba(1, 1, 1, 0.65)
+                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                }
+            }
+
+            // Toolbar controls — on top of blur
+            Toolbar {
+                id: toolbar
+                anchors.top: parent.top
+                anchors.left: parent.left
+                anchors.right: parent.right
+                z: 2
+                canGoBack: root.canGoBack
+                canGoForward: root.canGoForward
+                breadcrumbs: root.breadcrumbs
+                viewMode: root.viewMode
+                onViewModeRequested: (mode) => root.viewMode = mode
+                onThemeCycled: {
+                    let next = Theme.themeMode === "system" ? "light"
+                             : Theme.themeMode === "light"  ? "dark"
+                             : "system"
+                    Theme.themeMode = next
+                    signalForwarder.emitSignal("themeChanged", [next])
+                }
+            }
+
             StatusBar {
-                Layout.fillWidth: true
+                id: statusBar
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
                 itemCount: root.itemCount
                 currentPath: root.currentPath
             }

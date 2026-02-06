@@ -34,6 +34,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle SET_AUTO_RELOAD;
     private static final MethodHandle IS_AUTO_RELOAD_ENABLED;
     private static final MethodHandle ENABLE_SIDEBAR_VIBRANCY;
+    private static final MethodHandle ENABLE_TOOLBAR_VIBRANCY;
     private static final MethodHandle SET_VIBRANCY_APPEARANCE;
 
     // Upcall state for signal callbacks
@@ -91,6 +92,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN));
         ENABLE_SIDEBAR_VIBRANCY = downcall("cuirq_enable_sidebar_vibrancy",
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
+        ENABLE_TOOLBAR_VIBRANCY = downcall("cuirq_enable_toolbar_vibrancy",
+                FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         SET_VIBRANCY_APPEARANCE = downcall("cuirq_set_vibrancy_appearance",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
     }
@@ -283,6 +286,14 @@ public class PanamaBridge implements AutoCloseable {
             ENABLE_SIDEBAR_VIBRANCY.invokeExact(width);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to enable sidebar vibrancy", t);
+        }
+    }
+
+    public static void enableToolbarVibrancy(int sidebarWidth, int toolbarHeight) {
+        try {
+            ENABLE_TOOLBAR_VIBRANCY.invokeExact(sidebarWidth, toolbarHeight);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to enable toolbar vibrancy", t);
         }
     }
 

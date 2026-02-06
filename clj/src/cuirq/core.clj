@@ -79,6 +79,12 @@
   [width]
   (PanamaBridge/enableSidebarVibrancy (int width)))
 
+(defn enable-toolbar-vibrancy!
+  "Enable macOS toolbar vibrancy effect (NSVisualEffectView with HeaderView material).
+   sidebarWidth is the x offset, toolbarHeight is the height."
+  [sidebar-width toolbar-height]
+  (PanamaBridge/enableToolbarVibrancy (int sidebar-width) (int toolbar-height)))
+
 (defn set-vibrancy-appearance!
   "Set sidebar vibrancy appearance. Mode: \"light\", \"dark\", or \"system\"."
   [mode]

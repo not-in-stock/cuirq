@@ -67,6 +67,10 @@ void cuirq_enable_sidebar_vibrancy(int width) {
     cuirq::enable_sidebar_vibrancy(width);
 }
 
+void cuirq_enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight) {
+    cuirq::enable_toolbar_vibrancy(sidebarWidth, toolbarHeight);
+}
+
 void cuirq_set_vibrancy_appearance(const char* mode) {
     cuirq::set_vibrancy_appearance(mode);
 }

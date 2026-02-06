@@ -12,6 +12,7 @@ Rectangle {
         anchors.topMargin: 0
         anchors.leftMargin: 20
         anchors.rightMargin: 0
+        topMargin: 48
         cellWidth: 150
         cellHeight: 150
         clip: true

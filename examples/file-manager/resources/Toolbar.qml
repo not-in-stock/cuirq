@@ -13,8 +13,7 @@ Rectangle {
     signal themeCycled()
 
     height: 48
-    color: Theme.background
-    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+    color: "transparent"
 
     // Bottom border
     Rectangle {
@@ -22,8 +21,7 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: Theme.border
-        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+        color: Qt.rgba(0, 0, 0, 0.1)
     }
 
     RowLayout {

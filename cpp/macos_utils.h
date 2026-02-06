@@ -4,7 +4,8 @@
 namespace cuirq {
 void setMacOSAppName(const char* name);
 void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth);
-void setSidebarVibrancyAppearance(const char* mode);
+void setupToolbarVibrancy(void* nativeWindowHandle, int sidebarWidth, int toolbarHeight);
+void setVibrancyAppearance(const char* mode);
 }
 
 #endif // MACOS_UTILS_H

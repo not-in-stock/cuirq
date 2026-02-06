@@ -345,13 +345,28 @@ void enable_sidebar_vibrancy(int width) {
     });
 #else
     Q_UNUSED(width);
-    std::cout << "[CPP] Sidebar vibrancy is only supported on macOS" << std::endl;
+#endif
+}
+
+void enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight) {
+#ifdef Q_OS_MACOS
+    if (!g_engine || g_engine->rootObjects().isEmpty()) return;
+    QObject* root = g_engine->rootObjects().first();
+    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
+    if (!window) return;
+    QTimer::singleShot(0, window, [window, sidebarWidth, toolbarHeight]() {
+        void* winId = reinterpret_cast<void*>(window->winId());
+        setupToolbarVibrancy(winId, sidebarWidth, toolbarHeight);
+    });
+#else
+    Q_UNUSED(sidebarWidth);
+    Q_UNUSED(toolbarHeight);
 #endif
 }
 
 void set_vibrancy_appearance(const char* mode) {
 #ifdef Q_OS_MACOS
-    setSidebarVibrancyAppearance(mode);
+    setVibrancyAppearance(mode);
 #else
     Q_UNUSED(mode);
 #endif

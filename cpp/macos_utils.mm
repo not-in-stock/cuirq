@@ -2,8 +2,8 @@
 #import <Cocoa/Cocoa.h>
 #include <iostream>
 
-// Stored reference so we can update appearance later
-static NSVisualEffectView* g_sidebarVibrancy = nil;
+// All vibrancy views — appearance updates apply to all of them
+static NSMutableArray<NSVisualEffectView*> *g_vibrancyViews = nil;
 
 namespace cuirq {
 
@@ -27,10 +27,6 @@ void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth) {
             return;
         }
 
-        // Qt renders directly into contentView's layer.
-        // Any subview of contentView sits ON TOP of Qt's render.
-        // To place vibrancy BEHIND Qt, insert it as a sibling of contentView
-        // (into contentView's superview, i.e. NSThemeFrame), positioned below.
         NSView *contentView = [window contentView];
         NSView *themeFrame = [contentView superview];
         if (!themeFrame) {
@@ -38,23 +34,56 @@ void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth) {
             return;
         }
 
-        NSVisualEffectView *vibrancy = [[NSVisualEffectView alloc]
+        if (!g_vibrancyViews) g_vibrancyViews = [NSMutableArray new];
+
+        // Sidebar: left edge, full height
+        NSVisualEffectView *sidebar = [[NSVisualEffectView alloc]
             initWithFrame:NSMakeRect(0, 0, sidebarWidth, contentView.bounds.size.height)];
-        vibrancy.material = NSVisualEffectMaterialSidebar;
-        vibrancy.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-        vibrancy.state = NSVisualEffectStateActive;
-        vibrancy.autoresizingMask = NSViewHeightSizable;
+        sidebar.material = NSVisualEffectMaterialSidebar;
+        sidebar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+        sidebar.state = NSVisualEffectStateActive;
+        sidebar.autoresizingMask = NSViewHeightSizable;
 
-        [themeFrame addSubview:vibrancy positioned:NSWindowBelow relativeTo:contentView];
-
-        g_sidebarVibrancy = vibrancy;
+        [themeFrame addSubview:sidebar positioned:NSWindowBelow relativeTo:contentView];
+        [g_vibrancyViews addObject:sidebar];
 
         std::cout << "[CPP] Sidebar vibrancy installed (width=" << sidebarWidth << ")" << std::endl;
     }
 }
 
-void setSidebarVibrancyAppearance(const char* mode) {
-    if (!g_sidebarVibrancy) return;
+void setupToolbarVibrancy(void* nativeWindowHandle, int sidebarWidth, int toolbarHeight) {
+    @autoreleasepool {
+        NSView *qtView = (__bridge NSView *)nativeWindowHandle;
+        NSWindow *window = [qtView window];
+        if (!window) return;
+
+        NSView *contentView = [window contentView];
+        NSView *themeFrame = [contentView superview];
+        if (!themeFrame) return;
+
+        if (!g_vibrancyViews) g_vibrancyViews = [NSMutableArray new];
+
+        // Toolbar: top-right area (NSView y=0 is bottom, so top = height - toolbarHeight)
+        CGFloat cvWidth = contentView.bounds.size.width;
+        CGFloat cvHeight = contentView.bounds.size.height;
+
+        NSVisualEffectView *toolbar = [[NSVisualEffectView alloc]
+            initWithFrame:NSMakeRect(sidebarWidth, cvHeight - toolbarHeight,
+                                     cvWidth - sidebarWidth, toolbarHeight)];
+        toolbar.material = NSVisualEffectMaterialHeaderView;
+        toolbar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
+        toolbar.state = NSVisualEffectStateActive;
+        toolbar.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
+
+        [themeFrame addSubview:toolbar positioned:NSWindowBelow relativeTo:contentView];
+        [g_vibrancyViews addObject:toolbar];
+
+        std::cout << "[CPP] Toolbar vibrancy installed (height=" << toolbarHeight << ")" << std::endl;
+    }
+}
+
+void setVibrancyAppearance(const char* mode) {
+    if (!g_vibrancyViews || g_vibrancyViews.count == 0) return;
 
     @autoreleasepool {
         NSString *modeStr = [NSString stringWithUTF8String:mode];
@@ -65,10 +94,11 @@ void setSidebarVibrancyAppearance(const char* mode) {
         } else if ([modeStr isEqualToString:@"dark"]) {
             appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
         }
-        // "system" → nil → follows system appearance
 
-        g_sidebarVibrancy.appearance = appearance;
-        std::cout << "[CPP] Sidebar vibrancy appearance: " << mode << std::endl;
+        for (NSVisualEffectView *v in g_vibrancyViews) {
+            v.appearance = appearance;
+        }
+        std::cout << "[CPP] Vibrancy appearance: " << mode << std::endl;
     }
 }
 
