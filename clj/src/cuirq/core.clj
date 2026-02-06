@@ -72,3 +72,14 @@
   "Check if automatic QML hot-reload is enabled."
   []
   (PanamaBridge/isAutoReloadEnabled))
+
+(defn enable-sidebar-vibrancy!
+  "Enable macOS sidebar vibrancy effect (NSVisualEffectView).
+   Width is the sidebar width in pixels."
+  [width]
+  (PanamaBridge/enableSidebarVibrancy (int width)))
+
+(defn set-vibrancy-appearance!
+  "Set sidebar vibrancy appearance. Mode: \"light\", \"dark\", or \"system\"."
+  [mode]
+  (PanamaBridge/setVibrancyAppearance (name mode)))

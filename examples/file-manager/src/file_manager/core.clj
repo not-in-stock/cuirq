@@ -202,12 +202,19 @@
                   path (resolve-sidebar-location (first args))]
               (navigate-to! path))))
 
+        (cuirq/on-signal! :themeChanged
+          (fn [_ json-args]
+            (let [args (json/read-str json-args)
+                  mode (first args)]
+              (cuirq/set-vibrancy-appearance! mode))))
+
         ;; Load QML
         (println " [4/4] Loading QML...")
         (cuirq/set-app-name! "cuirq File Manager")
         (let [qml-path (str (System/getProperty "user.dir") "/resources/file_manager.qml")]
           (when-not (cuirq/load-qml! qml-path)
             (throw (ex-info "Failed to load QML" {:path qml-path}))))
+        (cuirq/enable-sidebar-vibrancy! 220)
 
         ;; Navigate to home directory
         (navigate-to! (System/getProperty "user.home"))

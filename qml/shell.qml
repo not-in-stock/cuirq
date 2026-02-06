@@ -4,6 +4,7 @@ import QtQuick.Controls
 ApplicationWindow {
     id: shell
     visible: true
+    color: "transparent"
 
     title: contentLoader.item?.windowTitle ?? "cuirq"
     width: contentLoader.item?.windowWidth ?? 800

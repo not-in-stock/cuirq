@@ -7,8 +7,7 @@ Rectangle {
     property string currentPath: ""
 
     width: 220
-    color: Theme.sidebarBackground
-    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+    color: "transparent"
 
     // Right border
     Rectangle {
@@ -16,8 +15,7 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: Theme.border
-        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+        color: Qt.rgba(0, 0, 0, 0.1)
     }
 
     ColumnLayout {

@@ -33,6 +33,8 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle SET_APP_NAME;
     private static final MethodHandle SET_AUTO_RELOAD;
     private static final MethodHandle IS_AUTO_RELOAD_ENABLED;
+    private static final MethodHandle ENABLE_SIDEBAR_VIBRANCY;
+    private static final MethodHandle SET_VIBRANCY_APPEARANCE;
 
     // Upcall state for signal callbacks
     private static Arena signalArena;
@@ -87,6 +89,10 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_BOOLEAN));
         IS_AUTO_RELOAD_ENABLED = downcall("cuirq_is_auto_reload_enabled",
                 FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN));
+        ENABLE_SIDEBAR_VIBRANCY = downcall("cuirq_enable_sidebar_vibrancy",
+                FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
+        SET_VIBRANCY_APPEARANCE = downcall("cuirq_set_vibrancy_appearance",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
     }
 
     private static MethodHandle downcall(String name, FunctionDescriptor descriptor) {
@@ -269,6 +275,23 @@ public class PanamaBridge implements AutoCloseable {
             return (boolean) IS_AUTO_RELOAD_ENABLED.invokeExact();
         } catch (Throwable t) {
             throw new RuntimeException("Failed to check auto-reload", t);
+        }
+    }
+
+    public static void enableSidebarVibrancy(int width) {
+        try {
+            ENABLE_SIDEBAR_VIBRANCY.invokeExact(width);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to enable sidebar vibrancy", t);
+        }
+    }
+
+    public static void setVibrancyAppearance(String mode) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment modeStr = arena.allocateFrom(mode);
+            SET_VIBRANCY_APPEARANCE.invokeExact(modeStr);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to set vibrancy appearance", t);
         }
     }
 

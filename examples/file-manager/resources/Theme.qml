@@ -2,16 +2,25 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    property bool darkMode: false
+    // Theme mode: "light", "dark", or "system"
+    property string themeMode: "system"
+
+    // System dark mode detection (Qt 6.5+)
+    readonly property bool systemDark: Qt.styleHints.colorScheme === Qt.Dark
+
+    // Effective dark mode: derived from themeMode
+    readonly property bool darkMode: themeMode === "dark" ? true
+                                   : themeMode === "light" ? false
+                                   : systemDark
 
     // Backgrounds
     readonly property color background:        darkMode ? "#1E293B" : "#FFFFFF"
-    readonly property color sidebarBackground: darkMode ? "#162032" : "#F8FAFC"
+    readonly property color sidebarBackground: "transparent"
 
     // Surfaces & interactive
     readonly property color surfaceHover:      darkMode ? "#334155" : "#F1F5F9"
     readonly property color surfaceHoverOff:   Qt.alpha(surfaceHover, 0)
-    readonly property color surfaceActive:     darkMode ? "#334155" : "#E2E8F0"
+    readonly property color surfaceActive:     darkMode ? Qt.rgba(0.2, 0.25, 0.33, 0.3) : Qt.rgba(0, 0, 0, 0.1)
     readonly property color surfaceActiveOff:  Qt.alpha(surfaceActive, 0)
     readonly property color border:            darkMode ? "#334155" : "#E2E8F0"
 

@@ -63,4 +63,12 @@ bool cuirq_is_auto_reload_enabled(void) {
     return cuirq::is_auto_reload_enabled();
 }
 
+void cuirq_enable_sidebar_vibrancy(int width) {
+    cuirq::enable_sidebar_vibrancy(width);
+}
+
+void cuirq_set_vibrancy_appearance(const char* mode) {
+    cuirq::set_vibrancy_appearance(mode);
+}
+
 } // extern "C"

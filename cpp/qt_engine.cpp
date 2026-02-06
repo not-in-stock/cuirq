@@ -14,6 +14,7 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QTimer>
+#include <QQuickWindow>
 #include <iostream>
 #include <vector>
 #include <dlfcn.h>
@@ -111,6 +112,7 @@ bool initialize(int argc, char* argv[]) {
     }
     g_argc = argc;
 
+    QQuickWindow::setDefaultAlphaBuffer(true);
     g_app = new QGuiApplication(g_argc, g_argv_storage.data());
     std::cout << "[CPP] QGuiApplication created" << std::endl;
 
@@ -323,6 +325,36 @@ bool is_auto_reload_enabled() {
         return g_qmlWatcher->isAutoReloadEnabled();
     }
     return false;
+}
+
+void enable_sidebar_vibrancy(int width) {
+#ifdef Q_OS_MACOS
+    if (!g_engine || g_engine->rootObjects().isEmpty()) {
+        std::cerr << "[CPP] ERROR: No root window for vibrancy setup" << std::endl;
+        return;
+    }
+    QObject* root = g_engine->rootObjects().first();
+    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
+    if (!window) {
+        std::cerr << "[CPP] ERROR: Root object is not a QQuickWindow" << std::endl;
+        return;
+    }
+    QTimer::singleShot(0, window, [window, width]() {
+        void* winId = reinterpret_cast<void*>(window->winId());
+        setupSidebarVibrancy(winId, width);
+    });
+#else
+    Q_UNUSED(width);
+    std::cout << "[CPP] Sidebar vibrancy is only supported on macOS" << std::endl;
+#endif
+}
+
+void set_vibrancy_appearance(const char* mode) {
+#ifdef Q_OS_MACOS
+    setSidebarVibrancyAppearance(mode);
+#else
+    Q_UNUSED(mode);
+#endif
 }
 
 } // namespace cuirq

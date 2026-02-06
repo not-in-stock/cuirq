@@ -33,6 +33,10 @@ int get_model_count(const char* name);
 void set_auto_reload(bool enabled);
 bool is_auto_reload_enabled();
 
+// Platform
+void enable_sidebar_vibrancy(int width);
+void set_vibrancy_appearance(const char* mode);
+
 } // namespace cuirq
 
 #endif // QT_ENGINE_H

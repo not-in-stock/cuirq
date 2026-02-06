@@ -10,7 +10,7 @@ Rectangle {
     property string viewMode: "grid"
 
     signal viewModeRequested(string mode)
-    signal themeToggled()
+    signal themeCycled()
 
     height: 48
     color: Theme.background
@@ -185,7 +185,7 @@ Rectangle {
             }
         }
 
-        // Theme toggle
+        // Theme toggle (light → dark → system)
         Rectangle {
             width: 32; height: 32; radius: 6
             color: themeMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
@@ -193,14 +193,16 @@ Rectangle {
 
             Image {
                 anchors.centerIn: parent
-                source: Theme.darkMode ? "icons/sun.svg" : "icons/moon.svg"
+                source: Theme.themeMode === "light" ? "icons/sun.svg"
+                      : Theme.themeMode === "dark"  ? "icons/moon.svg"
+                      : "icons/system-theme.svg"
                 width: 18; height: 18; sourceSize.width: 18; sourceSize.height: 18
             }
 
             MouseArea {
                 id: themeMouse; anchors.fill: parent; hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: toolbar.themeToggled()
+                onClicked: toolbar.themeCycled()
             }
         }
     }

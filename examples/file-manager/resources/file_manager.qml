@@ -44,7 +44,13 @@ Item {
             breadcrumbs: root.breadcrumbs
             viewMode: root.viewMode
             onViewModeRequested: (mode) => root.viewMode = mode
-            onThemeToggled: Theme.darkMode = !Theme.darkMode
+            onThemeCycled: {
+                let next = Theme.themeMode === "system" ? "light"
+                         : Theme.themeMode === "light"  ? "dark"
+                         : "system"
+                Theme.themeMode = next
+                signalForwarder.emitSignal("themeChanged", [next])
+            }
         }
 
         RowLayout {
