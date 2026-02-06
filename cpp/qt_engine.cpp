@@ -13,9 +13,14 @@
 #include <QVariantList>
 #include <QFileInfo>
 #include <QDir>
+#include <QTimer>
 #include <iostream>
 #include <vector>
 #include <dlfcn.h>
+
+#ifdef Q_OS_MACOS
+#include "macos_utils.h"
+#endif
 
 // Signal forwarder for Panama FFM.
 // Exposes a Q_INVOKABLE emitSignal() to QML, forwards via C function pointer.
@@ -129,6 +134,19 @@ bool initialize(int argc, char* argv[]) {
     std::cout << "[CPP] StateObject + StateNotifier exposed to QML" << std::endl;
 
     return true;
+}
+
+void set_app_name(const char* name) {
+    if (!g_app) return;
+    QString appName = QString::fromUtf8(name);
+    g_app->setApplicationName(appName);
+    g_app->setApplicationDisplayName(appName);
+#ifdef Q_OS_MACOS
+    // Defer Cocoa menu rename until the event loop is running and the menu exists
+    QTimer::singleShot(0, g_app, [appName]() {
+        setMacOSAppName(appName.toUtf8().constData());
+    });
+#endif
 }
 
 void shutdown() {

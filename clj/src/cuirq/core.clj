@@ -24,6 +24,11 @@
   [path]
   (PanamaBridge/loadQml path))
 
+(defn set-app-name!
+  "Set the application name shown in the macOS menu bar."
+  [name]
+  (PanamaBridge/setAppName name))
+
 (defn set-property!
   "Set a context property available in QML."
   [name value]

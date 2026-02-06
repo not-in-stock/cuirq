@@ -8,6 +8,7 @@ using signal_callback_t = void(*)(const char* name, const char* json_args);
 
 // Lifecycle
 bool initialize(int argc, char* argv[]);
+void set_app_name(const char* name);
 void shutdown();
 int exec();
 void quit();

@@ -13,6 +13,7 @@ int  cuirq_exec(void);
 void cuirq_quit(void);
 
 bool cuirq_load_qml(const char* path);
+void cuirq_set_app_name(const char* name);
 void cuirq_set_property(const char* name, const char* json_value);
 
 typedef void (*cuirq_signal_callback_t)(const char* name, const char* json_args);

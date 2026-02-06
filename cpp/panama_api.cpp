@@ -23,6 +23,10 @@ bool cuirq_load_qml(const char* path) {
     return cuirq::load_qml(path);
 }
 
+void cuirq_set_app_name(const char* name) {
+    cuirq::set_app_name(name);
+}
+
 void cuirq_set_property(const char* name, const char* json_value) {
     cuirq::set_context_property(name, json_value);
 }

@@ -204,6 +204,7 @@
 
         ;; Load QML
         (println " [4/4] Loading QML...")
+        (cuirq/set-app-name! "cuirq File Manager")
         (let [qml-path (str (System/getProperty "user.dir") "/resources/file_manager.qml")]
           (when-not (cuirq/load-qml! qml-path)
             (throw (ex-info "Failed to load QML" {:path qml-path}))))

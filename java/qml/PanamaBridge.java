@@ -30,6 +30,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle SET_MODEL_DATA;
     private static final MethodHandle CLEAR_MODEL;
     private static final MethodHandle GET_MODEL_COUNT;
+    private static final MethodHandle SET_APP_NAME;
     private static final MethodHandle SET_AUTO_RELOAD;
     private static final MethodHandle IS_AUTO_RELOAD_ENABLED;
 
@@ -80,6 +81,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         GET_MODEL_COUNT = downcall("cuirq_get_model_count",
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, ValueLayout.ADDRESS));
+        SET_APP_NAME = downcall("cuirq_set_app_name",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         SET_AUTO_RELOAD = downcall("cuirq_set_auto_reload",
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_BOOLEAN));
         IS_AUTO_RELOAD_ENABLED = downcall("cuirq_is_auto_reload_enabled",
@@ -241,6 +244,15 @@ public class PanamaBridge implements AutoCloseable {
             return (int) GET_MODEL_COUNT.invokeExact(nameStr);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to get model count", t);
+        }
+    }
+
+    public static void setAppName(String name) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameStr = arena.allocateFrom(name);
+            SET_APP_NAME.invokeExact(nameStr);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to set app name", t);
         }
     }
 

@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
-project(cuirq LANGUAGES CXX)
+if(APPLE)
+    project(cuirq LANGUAGES CXX OBJCXX)
+else()
+    project(cuirq LANGUAGES CXX)
+endif()
 
 # Use C++20
 set(CMAKE_CXX_STANDARD 20)
@@ -20,13 +24,18 @@ set(CMAKE_AUTOMOC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Svg)
 
 # Build shared library (.dylib on macOS, .so on Linux)
-add_library(qmlbridge SHARED
+set(CUIRQ_SOURCES
     cpp/qt_engine.cpp
     cpp/jvmlistmodel.cpp
     cpp/qmlwatcher.cpp
     cpp/stateobject.cpp
     cpp/panama_api.cpp
 )
+if(APPLE)
+    list(APPEND CUIRQ_SOURCES cpp/macos_utils.mm)
+endif()
+
+add_library(qmlbridge SHARED ${CUIRQ_SOURCES})
 
 # Include directories
 target_include_directories(qmlbridge PRIVATE
@@ -41,6 +50,10 @@ target_link_libraries(qmlbridge PRIVATE
     Qt6::Quick
     Qt6::Svg
 )
+
+if(APPLE)
+    target_link_libraries(qmlbridge PRIVATE "-framework Cocoa")
+endif()
 
 # Output library to predictable location
 set_target_properties(qmlbridge PROPERTIES
