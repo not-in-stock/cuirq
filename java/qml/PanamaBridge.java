@@ -99,8 +99,9 @@ public class PanamaBridge implements AutoCloseable {
      * Dispatches to the registered Java handler by signal name.
      */
     private static void onSignal(MemorySegment namePtr, MemorySegment argsPtr) {
-        String name = namePtr.getString(0);
-        String args = argsPtr.getString(0);
+        // Upcall pointers arrive as zero-length segments; reinterpret so getString can scan for '\0'
+        String name = namePtr.reinterpret(Long.MAX_VALUE).getString(0);
+        String args = argsPtr.reinterpret(Long.MAX_VALUE).getString(0);
 
         SignalHandler handler = handlers.get(name);
         if (handler != null) {
