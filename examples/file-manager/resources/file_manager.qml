@@ -56,16 +56,52 @@ Item {
                 currentPath: root.currentPath
             }
 
-            FileGrid {
+            // Animated view container
+            Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                visible: root.viewMode === "grid"
-            }
+                clip: true
+                color: "#FFFFFF"
 
-            FileList {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                visible: root.viewMode === "list"
+                FileGrid {
+                    id: gridView
+                    anchors.fill: parent
+                    visible: root.viewMode === "grid"
+                    opacity: 0
+                    transform: Translate { id: gridTranslate; y: 4 }
+                }
+
+                FileList {
+                    id: listView
+                    anchors.fill: parent
+                    visible: root.viewMode === "list"
+                    opacity: 0
+                    transform: Translate { id: listTranslate; y: 4 }
+                }
+
+                // Fade-in + slide-up animation (matches original mockup: 150ms ease-out)
+                ParallelAnimation {
+                    id: gridFadeIn
+                    NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: gridTranslate; property: "y"; from: 4; to: 0; duration: 250; easing.type: Easing.OutQuad }
+                }
+
+                ParallelAnimation {
+                    id: listFadeIn
+                    NumberAnimation { target: listView; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: listTranslate; property: "y"; from: 4; to: 0; duration: 250; easing.type: Easing.OutQuad }
+                }
+
+                Connections {
+                    target: root
+                    function onViewModeChanged() {
+                        if (root.viewMode === "grid") gridFadeIn.restart()
+                        else listFadeIn.restart()
+                    }
+                }
+
+                // Initial fade-in
+                Component.onCompleted: gridFadeIn.start()
             }
         }
 

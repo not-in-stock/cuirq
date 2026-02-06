@@ -3,14 +3,16 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileGrid
-    color: "#F8FAFC"
+    color: "#FFFFFF"
 
     GridView {
         id: gridView
         anchors.fill: parent
-        anchors.margins: 16
-        cellWidth: 140
-        cellHeight: 140
+        anchors.topMargin: 12
+        anchors.leftMargin: 20
+        anchors.rightMargin: 20
+        cellWidth: 150
+        cellHeight: 150
         clip: true
 
         model: files

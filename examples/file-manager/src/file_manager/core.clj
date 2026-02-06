@@ -68,24 +68,18 @@
 (defn- build-breadcrumbs
   "Build breadcrumb trail from a path."
   [^String path]
-  (let [parts (-> path
-                  (.split (File/separator))
-                  seq)
-        ;; Build cumulative paths
-        crumbs (loop [remaining parts
-                      acc-path ""
-                      result []]
-                 (if (empty? remaining)
-                   result
-                   (let [part (first remaining)
-                         new-path (if (empty? acc-path)
-                                    (if (empty? part) "/" part)
-                                    (str acc-path "/" part))
-                         display (if (empty? part) "/" part)]
-                     (recur (rest remaining)
-                            new-path
-                            (conj result {:name display :path new-path})))))]
-    crumbs))
+  (let [parts (->> (.split path (File/separator))
+                   (remove empty?))]
+    (loop [remaining parts
+           acc-path ""
+           result [{:name "/" :path "/"}]]
+      (if (empty? remaining)
+        result
+        (let [part (first remaining)
+              new-path (str acc-path "/" part)]
+          (recur (rest remaining)
+                 new-path
+                 (conj result {:name part :path new-path})))))))
 
 (defn navigate-to!
   "Navigate to a directory path."

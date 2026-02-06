@@ -30,6 +30,7 @@
         qt6Packages = with pkgs.qt6; [
           qtbase
           qtdeclarative # QML engine
+          qtsvg # SVG support for Image elements
           # qtwayland        # Uncomment if needed on Linux/Wayland
         ];
 
@@ -78,12 +79,13 @@
         # Common environment variables
         commonEnv = {
           # Help CMake find Qt
-          CMAKE_PREFIX_PATH = "${pkgs.qt6.qtbase}:${pkgs.qt6.qtdeclarative}";
+          CMAKE_PREFIX_PATH = "${pkgs.qt6.qtbase}:${pkgs.qt6.qtdeclarative}:${pkgs.qt6.qtsvg}";
 
           # QML import paths
           QML2_IMPORT_PATH = "${pkgs.qt6.qtdeclarative}/lib/qt-6/qml";
 
-          # Qt platform plugin path
+          # Qt plugin paths (platform + image format plugins like SVG)
+          QT_PLUGIN_PATH = "${pkgs.qt6.qtbase}/lib/qt-6/plugins:${pkgs.qt6.qtsvg}/lib/qt-6/plugins";
           QT_QPA_PLATFORM_PLUGIN_PATH = "${pkgs.qt6.qtbase}/lib/qt-6/plugins/platforms";
         };
 

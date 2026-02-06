@@ -36,11 +36,14 @@ Rectangle {
             radius: 6
             color: backMouse.containsMouse && toolbar.canGoBack ? "#F1F5F9" : "transparent"
 
-            Text {
+            Image {
                 anchors.centerIn: parent
-                text: "\u25C0"
-                font.pixelSize: 14
-                color: toolbar.canGoBack ? "#334155" : "#CBD5E1"
+                source: "icons/arrow-left.svg"
+                width: 18
+                height: 18
+                sourceSize.width: 18
+                sourceSize.height: 18
+                opacity: toolbar.canGoBack ? 1.0 : 0.3
             }
 
             MouseArea {
@@ -62,11 +65,14 @@ Rectangle {
             radius: 6
             color: fwdMouse.containsMouse && toolbar.canGoForward ? "#F1F5F9" : "transparent"
 
-            Text {
+            Image {
                 anchors.centerIn: parent
-                text: "\u25B6"
-                font.pixelSize: 14
-                color: toolbar.canGoForward ? "#334155" : "#CBD5E1"
+                source: "icons/arrow-right.svg"
+                width: 18
+                height: 18
+                sourceSize.width: 18
+                sourceSize.height: 18
+                opacity: toolbar.canGoForward ? 1.0 : 0.3
             }
 
             MouseArea {
@@ -81,89 +87,23 @@ Rectangle {
             }
         }
 
-        // Separator
-        Rectangle {
-            width: 1
-            height: 24
-            color: "#E2E8F0"
-            Layout.leftMargin: 4
-            Layout.rightMargin: 4
-        }
-
-        // View mode toggle
-        Row {
-            spacing: 2
-
-            Rectangle {
-                width: 30
-                height: 28
-                radius: 5
-                color: toolbar.viewMode === "grid" ? "#E2E8F0" : (gridMouse.containsMouse ? "#F1F5F9" : "transparent")
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "\u25A6"
-                    font.pixelSize: 14
-                    color: toolbar.viewMode === "grid" ? "#334155" : "#94A3B8"
-                }
-
-                MouseArea {
-                    id: gridMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: toolbar.viewModeRequested("grid")
-                }
-            }
-
-            Rectangle {
-                width: 30
-                height: 28
-                radius: 5
-                color: toolbar.viewMode === "list" ? "#E2E8F0" : (listMouse.containsMouse ? "#F1F5F9" : "transparent")
-
-                Text {
-                    anchors.centerIn: parent
-                    text: "\u2630"
-                    font.pixelSize: 14
-                    color: toolbar.viewMode === "list" ? "#334155" : "#94A3B8"
-                }
-
-                MouseArea {
-                    id: listMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: toolbar.viewModeRequested("list")
-                }
-            }
-        }
-
-        // Separator
-        Rectangle {
-            width: 1
-            height: 24
-            color: "#E2E8F0"
-            Layout.leftMargin: 4
-            Layout.rightMargin: 4
-        }
-
         // Breadcrumbs
         Row {
             Layout.fillWidth: true
-            spacing: 4
+            spacing: 2
             clip: true
+            Layout.leftMargin: 8
 
             Repeater {
                 model: toolbar.breadcrumbs.length
 
                 Row {
                     required property int index
-                    spacing: 4
+                    spacing: 2
 
                     Text {
-                        text: index > 0 ? "/" : ""
-                        font.pixelSize: 13
+                        text: "/"
+                        font.pixelSize: 14
                         color: "#CBD5E1"
                         anchors.verticalCenter: parent.verticalCenter
                         visible: index > 0
@@ -171,8 +111,8 @@ Rectangle {
 
                     Rectangle {
                         width: crumbText.width + 12
-                        height: 26
-                        radius: 4
+                        height: 28
+                        radius: 6
                         anchors.verticalCenter: parent.verticalCenter
                         color: crumbMouse.containsMouse ? "#F1F5F9" : "transparent"
 
@@ -193,6 +133,70 @@ Rectangle {
                             onClicked: signalForwarder.emitSignal("navigate", [toolbar.breadcrumbs[index].path])
                         }
                     }
+                }
+            }
+        }
+
+        // Separator
+        Rectangle {
+            width: 1
+            height: 24
+            color: "#E2E8F0"
+            Layout.leftMargin: 4
+            Layout.rightMargin: 4
+        }
+
+        // View mode toggle
+        Row {
+            spacing: 2
+
+            Rectangle {
+                width: 32
+                height: 32
+                radius: 6
+                color: toolbar.viewMode === "grid" ? "#E2E8F0" : (gridMouse.containsMouse ? "#F1F5F9" : "transparent")
+
+                Image {
+                    anchors.centerIn: parent
+                    source: "icons/grid-view.svg"
+                    width: 18
+                    height: 18
+                    sourceSize.width: 18
+                    sourceSize.height: 18
+                    opacity: toolbar.viewMode === "grid" ? 1.0 : 0.5
+                }
+
+                MouseArea {
+                    id: gridMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: toolbar.viewModeRequested("grid")
+                }
+            }
+
+            Rectangle {
+                width: 32
+                height: 32
+                radius: 6
+                color: toolbar.viewMode === "list" ? "#E2E8F0" : (listMouse.containsMouse ? "#F1F5F9" : "transparent")
+
+                Image {
+                    anchors.centerIn: parent
+                    source: "icons/list-view.svg"
+                    width: 18
+                    height: 18
+                    sourceSize.width: 18
+                    sourceSize.height: 18
+                    opacity: toolbar.viewMode === "list" ? 1.0 : 0.5
+                }
+
+                MouseArea {
+                    id: listMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: toolbar.viewModeRequested("list")
                 }
             }
         }

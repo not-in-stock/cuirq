@@ -6,8 +6,8 @@ Rectangle {
 
     property string currentPath: ""
 
-    width: 200
-    color: "#FFFFFF"
+    width: 220
+    color: "#F8FAFC"
 
     // Right border
     Rectangle {
@@ -20,50 +20,58 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 12
-        spacing: 4
+        anchors.topMargin: 16
+        anchors.leftMargin: 12
+        anchors.rightMargin: 13
+        anchors.bottomMargin: 12
+        spacing: 2
 
+        // FAVORITES header
         Text {
-            text: "Favorites"
+            text: "FAVORITES"
             font.pixelSize: 11
             font.bold: true
+            font.letterSpacing: 0.5
             color: "#94A3B8"
-            Layout.leftMargin: 8
-            Layout.bottomMargin: 4
+            Layout.leftMargin: 10
+            Layout.bottomMargin: 6
         }
 
         Repeater {
             model: ListModel {
-                ListElement { label: "Home";      icon: "\uD83C\uDFE0"; key: "home" }
-                ListElement { label: "Desktop";   icon: "\uD83D\uDDA5"; key: "desktop" }
-                ListElement { label: "Documents"; icon: "\uD83D\uDCC4"; key: "documents" }
-                ListElement { label: "Downloads"; icon: "\uD83D\uDCE5"; key: "downloads" }
-                ListElement { label: "Pictures";  icon: "\uD83D\uDDBC"; key: "pictures" }
-                ListElement { label: "Music";     icon: "\uD83C\uDFB5"; key: "music" }
+                ListElement { label: "Home";      iconFile: "icons/home.svg";      key: "home" }
+                ListElement { label: "Desktop";   iconFile: "icons/desktop.svg";   key: "desktop" }
+                ListElement { label: "Documents"; iconFile: "icons/documents.svg"; key: "documents" }
+                ListElement { label: "Downloads"; iconFile: "icons/downloads.svg"; key: "downloads" }
+                ListElement { label: "Pictures";  iconFile: "icons/pictures.svg";  key: "pictures" }
+                ListElement { label: "Music";     iconFile: "icons/music.svg";     key: "music" }
             }
 
             Rectangle {
                 required property int index
                 required property string label
-                required property string icon
+                required property string iconFile
                 required property string key
 
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: sidebarMouse.containsMouse ? "#F1F5F9" : "transparent"
+                color: sidebarMouse.containsMouse ? "#E2E8F0" : "transparent"
 
                 Behavior on color { ColorAnimation { duration: 150 } }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.left: parent.left
-                    anchors.leftMargin: 8
-                    spacing: 8
+                    anchors.leftMargin: 10
+                    spacing: 10
 
-                    Text {
-                        text: icon
-                        font.pixelSize: 16
+                    Image {
+                        source: iconFile
+                        width: 20
+                        height: 20
+                        sourceSize.width: 20
+                        sourceSize.height: 20
                         anchors.verticalCenter: parent.verticalCenter
                     }
 

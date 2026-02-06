@@ -3,7 +3,20 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileList
-    color: "#F8FAFC"
+    color: "#FFFFFF"
+
+    function iconSource(type) {
+        switch (type) {
+            case "folder":   return "icons/folder.svg"
+            case "document": return "icons/document.svg"
+            case "image":    return "icons/image.svg"
+            case "audio":    return "icons/audio.svg"
+            case "video":    return "icons/video.svg"
+            case "code":     return "icons/code.svg"
+            case "archive":  return "icons/archive.svg"
+            default:         return "icons/file.svg"
+        }
+    }
 
     ListView {
         id: listView
@@ -32,40 +45,13 @@ Rectangle {
                 spacing: 10
 
                 // Icon
-                Rectangle {
-                    width: 28
-                    height: 28
-                    radius: 6
+                Image {
+                    source: fileList.iconSource(model.fileType)
+                    width: 24
+                    height: 24
+                    sourceSize.width: 24
+                    sourceSize.height: 24
                     anchors.verticalCenter: parent.verticalCenter
-                    color: {
-                        switch (model.fileType) {
-                            case "folder":   return "#FEF3C7"
-                            case "document": return "#DBEAFE"
-                            case "image":    return "#D1FAE5"
-                            case "audio":    return "#FCE7F3"
-                            case "video":    return "#EDE9FE"
-                            case "code":     return "#E0E7FF"
-                            case "archive":  return "#FEE2E2"
-                            default:         return "#F1F5F9"
-                        }
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        font.pixelSize: 14
-                        text: {
-                            switch (model.fileType) {
-                                case "folder":   return "\uD83D\uDCC1"
-                                case "document": return "\uD83D\uDCC4"
-                                case "image":    return "\uD83D\uDDBC"
-                                case "audio":    return "\uD83C\uDFB5"
-                                case "video":    return "\uD83C\uDFAC"
-                                case "code":     return "\uD83D\uDCBB"
-                                case "archive":  return "\uD83D\uDCE6"
-                                default:         return "\uD83D\uDCC3"
-                            }
-                        }
-                    }
                 }
 
                 // File name
@@ -75,7 +61,7 @@ Rectangle {
                     color: "#334155"
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 40
+                    width: parent.width - 36
                 }
             }
 
