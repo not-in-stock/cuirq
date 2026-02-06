@@ -9,9 +9,9 @@ Rectangle {
     GridView {
         id: gridView
         anchors.fill: parent
-        anchors.topMargin: 12
+        anchors.topMargin: 0
         anchors.leftMargin: 20
-        anchors.rightMargin: 20
+        anchors.rightMargin: 0
         cellWidth: 150
         cellHeight: 150
         clip: true
