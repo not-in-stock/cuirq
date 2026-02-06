@@ -37,7 +37,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: backMouse.containsMouse && toolbar.canGoBack ? Theme.surfaceHover : "transparent"
+            color: backMouse.containsMouse && toolbar.canGoBack ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Image {
                 anchors.centerIn: parent
@@ -61,7 +61,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: fwdMouse.containsMouse && toolbar.canGoForward ? Theme.surfaceHover : "transparent"
+            color: fwdMouse.containsMouse && toolbar.canGoForward ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Image {
                 anchors.centerIn: parent
@@ -107,7 +107,7 @@ Rectangle {
                         height: 28
                         radius: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        color: crumbMouse.containsMouse ? Theme.surfaceHover : "transparent"
+                        color: crumbMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
                         Text {
                             id: crumbText
@@ -148,7 +148,7 @@ Rectangle {
                 width: 32; height: 32; radius: 6
                 color: toolbar.viewMode === "grid"
                     ? Theme.surfaceActive
-                    : (gridMouse.containsMouse ? Theme.surfaceHover : "transparent")
+                    : (gridMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
@@ -168,7 +168,7 @@ Rectangle {
                 width: 32; height: 32; radius: 6
                 color: toolbar.viewMode === "list"
                     ? Theme.surfaceActive
-                    : (listMouse.containsMouse ? Theme.surfaceHover : "transparent")
+                    : (listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
@@ -188,7 +188,7 @@ Rectangle {
         // Theme toggle
         Rectangle {
             width: 32; height: 32; radius: 6
-            color: themeMouse.containsMouse ? Theme.surfaceHover : "transparent"
+            color: themeMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
             Layout.leftMargin: 4
 
             Image {

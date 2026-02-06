@@ -33,7 +33,7 @@ Rectangle {
             width: listView.width
             height: 40
             radius: 6
-            color: listMouse.containsMouse ? Theme.surfaceHover : "transparent"
+            color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 

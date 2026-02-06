@@ -58,7 +58,7 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: sidebarMouse.containsMouse ? Theme.surfaceActive : "transparent"
+                color: sidebarMouse.containsMouse ? Theme.surfaceActive : Theme.surfaceActiveOff
 
                 Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 

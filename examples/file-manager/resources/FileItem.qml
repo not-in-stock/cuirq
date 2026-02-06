@@ -12,7 +12,7 @@ Rectangle {
     width: 130
     height: 140
     radius: 10
-    color: mouseArea.containsMouse ? Theme.surfaceHover : "transparent"
+    color: mouseArea.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
     Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 
