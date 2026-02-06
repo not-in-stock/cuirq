@@ -70,7 +70,7 @@ Item {
                     anchors.fill: parent
                     visible: root.viewMode === "grid"
                     opacity: 0
-                    transform: Translate { id: gridTranslate; y: 4 }
+                    transform: Translate { id: gridTranslate; y: Theme.animViewOffset }
                 }
 
                 FileList {
@@ -78,24 +78,28 @@ Item {
                     anchors.fill: parent
                     visible: root.viewMode === "list"
                     opacity: 0
-                    transform: Translate { id: listTranslate; y: 4 }
+                    transform: Translate { id: listTranslate; y: Theme.animViewOffset }
                 }
 
                 ParallelAnimation {
                     id: gridFadeIn
-                    NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: gridTranslate; property: "y"; from: 4; to: 0; duration: 250; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: gridTranslate; property: "y"; from: Theme.animViewOffset; to: 0; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
                 }
 
                 ParallelAnimation {
                     id: listFadeIn
-                    NumberAnimation { target: listView; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: listTranslate; property: "y"; from: 4; to: 0; duration: 250; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: listView; property: "opacity"; from: 0; to: 1; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: listTranslate; property: "y"; from: Theme.animViewOffset; to: 0; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
                 }
 
                 Connections {
                     target: root
                     function onViewModeChanged() {
+                        if (root.viewMode === "grid") gridFadeIn.restart()
+                        else listFadeIn.restart()
+                    }
+                    function onCurrentPathChanged() {
                         if (root.viewMode === "grid") gridFadeIn.restart()
                         else listFadeIn.restart()
                     }

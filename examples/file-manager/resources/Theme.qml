@@ -20,5 +20,9 @@ QtObject {
     readonly property color textHeading:   darkMode ? "#F8FAFC" : "#0F172A"
     readonly property color textSeparator: darkMode ? "#475569" : "#CBD5E1"
 
-    readonly property int animDuration: 200
+    // Animation
+    readonly property int animDuration:      200   // theme color transitions
+    readonly property int animHoverDuration: 150   // hover highlight
+    readonly property int animViewDuration:  250   // content fade/slide on navigation
+    readonly property real animViewOffset:   8     // slide distance (px)
 }

@@ -35,7 +35,7 @@ Rectangle {
             radius: 6
             color: listMouse.containsMouse ? Theme.surfaceHover : "transparent"
 
-            Behavior on color { ColorAnimation { duration: 150 } }
+            Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter

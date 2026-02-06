@@ -60,7 +60,7 @@ Rectangle {
                 radius: 8
                 color: sidebarMouse.containsMouse ? Theme.surfaceActive : "transparent"
 
-                Behavior on color { ColorAnimation { duration: 150 } }
+                Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter

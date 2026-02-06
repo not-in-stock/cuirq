@@ -14,7 +14,7 @@ Rectangle {
     radius: 10
     color: mouseArea.containsMouse ? Theme.surfaceHover : "transparent"
 
-    Behavior on color { ColorAnimation { duration: 150 } }
+    Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
 
     function iconSource(type) {
         switch (type) {

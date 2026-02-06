@@ -185,6 +185,10 @@ bool load_qml(const char* path) {
     QUrl contentUrl = QUrl::fromLocalFile(contentPath);
     g_contentUrl = contentUrl.toString();
 
+    // Add content directory to import path so qmldir singletons are found
+    QString contentDir = QFileInfo(contentPath).absolutePath();
+    g_engine->addImportPath(contentDir);
+
     if (!g_shellLoaded) {
         // First load: set content URL and load the shell
         QString shellPath = findShellQmlPath();
