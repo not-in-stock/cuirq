@@ -3,9 +3,8 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileList
-    property bool darkMode: false
-    color: darkMode ? "#1E293B" : "#FFFFFF"
-    Behavior on color { ColorAnimation { duration: 200 } }
+    color: Theme.background
+    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
     function iconSource(type) {
         switch (type) {
@@ -34,9 +33,7 @@ Rectangle {
             width: listView.width
             height: 40
             radius: 6
-            color: listMouse.containsMouse
-                ? (fileList.darkMode ? "#334155" : "#F1F5F9")
-                : "transparent"
+            color: listMouse.containsMouse ? Theme.surfaceHover : "transparent"
 
             Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -58,7 +55,7 @@ Rectangle {
                 Text {
                     text: model.name
                     font.pixelSize: 13
-                    color: fileList.darkMode ? "#E2E8F0" : "#334155"
+                    color: Theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 36
@@ -72,7 +69,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.isDir ? "" : model.size
                 font.pixelSize: 12
-                color: fileList.darkMode ? "#64748B" : "#94A3B8"
+                color: Theme.textTertiary
             }
 
             MouseArea {
@@ -95,7 +92,7 @@ Rectangle {
             anchors.centerIn: parent
             text: "This folder is empty"
             font.pixelSize: 16
-            color: "#94A3B8"
+            color: Theme.textSecondary
             visible: listView.count === 0
         }
     }

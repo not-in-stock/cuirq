@@ -8,14 +8,13 @@ Rectangle {
     property bool canGoForward: false
     property var breadcrumbs: []
     property string viewMode: "grid"
-    property bool darkMode: false
 
     signal viewModeRequested(string mode)
     signal themeToggled()
 
     height: 48
-    color: darkMode ? "#1E293B" : "#FFFFFF"
-    Behavior on color { ColorAnimation { duration: 200 } }
+    color: Theme.background
+    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
 
     // Bottom border
     Rectangle {
@@ -23,8 +22,8 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: darkMode ? "#334155" : "#E2E8F0"
-        Behavior on color { ColorAnimation { duration: 200 } }
+        color: Theme.border
+        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
     }
 
     RowLayout {
@@ -38,7 +37,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: backMouse.containsMouse && toolbar.canGoBack ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
+            color: backMouse.containsMouse && toolbar.canGoBack ? Theme.surfaceHover : "transparent"
 
             Image {
                 anchors.centerIn: parent
@@ -62,7 +61,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: fwdMouse.containsMouse && toolbar.canGoForward ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
+            color: fwdMouse.containsMouse && toolbar.canGoForward ? Theme.surfaceHover : "transparent"
 
             Image {
                 anchors.centerIn: parent
@@ -98,7 +97,7 @@ Rectangle {
                     Text {
                         text: "/"
                         font.pixelSize: 14
-                        color: darkMode ? "#475569" : "#CBD5E1"
+                        color: Theme.textSeparator
                         anchors.verticalCenter: parent.verticalCenter
                         visible: index > 0
                     }
@@ -108,7 +107,7 @@ Rectangle {
                         height: 28
                         radius: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        color: crumbMouse.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
+                        color: crumbMouse.containsMouse ? Theme.surfaceHover : "transparent"
 
                         Text {
                             id: crumbText
@@ -117,8 +116,8 @@ Rectangle {
                             font.pixelSize: 13
                             font.bold: index === toolbar.breadcrumbs.length - 1
                             color: index === toolbar.breadcrumbs.length - 1
-                                ? (darkMode ? "#F8FAFC" : "#0F172A")
-                                : (darkMode ? "#94A3B8" : "#64748B")
+                                ? Theme.textHeading
+                                : Theme.textSecondary
                         }
 
                         MouseArea {
@@ -136,9 +135,9 @@ Rectangle {
         // Separator
         Rectangle {
             width: 1; height: 24
-            color: darkMode ? "#334155" : "#E2E8F0"
+            color: Theme.border
             Layout.leftMargin: 4; Layout.rightMargin: 4
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on color { ColorAnimation { duration: Theme.animDuration } }
         }
 
         // View mode toggle
@@ -148,8 +147,8 @@ Rectangle {
             Rectangle {
                 width: 32; height: 32; radius: 6
                 color: toolbar.viewMode === "grid"
-                    ? (darkMode ? "#334155" : "#E2E8F0")
-                    : (gridMouse.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent")
+                    ? Theme.surfaceActive
+                    : (gridMouse.containsMouse ? Theme.surfaceHover : "transparent")
 
                 Image {
                     anchors.centerIn: parent
@@ -168,8 +167,8 @@ Rectangle {
             Rectangle {
                 width: 32; height: 32; radius: 6
                 color: toolbar.viewMode === "list"
-                    ? (darkMode ? "#334155" : "#E2E8F0")
-                    : (listMouse.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent")
+                    ? Theme.surfaceActive
+                    : (listMouse.containsMouse ? Theme.surfaceHover : "transparent")
 
                 Image {
                     anchors.centerIn: parent
@@ -189,12 +188,12 @@ Rectangle {
         // Theme toggle
         Rectangle {
             width: 32; height: 32; radius: 6
-            color: themeMouse.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
+            color: themeMouse.containsMouse ? Theme.surfaceHover : "transparent"
             Layout.leftMargin: 4
 
             Image {
                 anchors.centerIn: parent
-                source: darkMode ? "icons/sun.svg" : "icons/moon.svg"
+                source: Theme.darkMode ? "icons/sun.svg" : "icons/moon.svg"
                 width: 18; height: 18; sourceSize.width: 18; sourceSize.height: 18
             }
 

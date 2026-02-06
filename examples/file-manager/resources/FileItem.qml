@@ -8,12 +8,11 @@ Rectangle {
     property bool isDir: false
     property string fileSize: ""
     property string fileType: "other"
-    property bool darkMode: false
 
     width: 130
     height: 140
     radius: 10
-    color: mouseArea.containsMouse ? (darkMode ? "#334155" : "#F1F5F9") : "transparent"
+    color: mouseArea.containsMouse ? Theme.surfaceHover : "transparent"
 
     Behavior on color { ColorAnimation { duration: 150 } }
 
@@ -46,7 +45,7 @@ Rectangle {
         Text {
             text: fileItem.fileName
             font.pixelSize: 12
-            color: fileItem.darkMode ? "#E2E8F0" : "#334155"
+            color: Theme.textPrimary
             width: 118
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
@@ -58,7 +57,7 @@ Rectangle {
         Text {
             text: fileItem.fileSize
             font.pixelSize: 11
-            color: fileItem.darkMode ? "#64748B" : "#94A3B8"
+            color: Theme.textTertiary
             anchors.horizontalCenter: parent.horizontalCenter
             visible: !fileItem.isDir
         }
