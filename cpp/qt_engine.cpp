@@ -327,6 +327,28 @@ bool is_auto_reload_enabled() {
     return false;
 }
 
+void hide_titlebar() {
+#ifdef Q_OS_MACOS
+    if (!g_engine || g_engine->rootObjects().isEmpty()) {
+        std::cerr << "[CPP] ERROR: No root window for titlebar setup" << std::endl;
+        return;
+    }
+    QObject* root = g_engine->rootObjects().first();
+    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
+    if (!window) {
+        std::cerr << "[CPP] ERROR: Root object is not a QQuickWindow" << std::endl;
+        return;
+    }
+    QTimer::singleShot(0, window, [window]() {
+        void* winId = reinterpret_cast<void*>(window->winId());
+        int tbHeight = hideTitlebar(winId);
+        g_engine->rootContext()->setContextProperty("_cuirq_titlebar_height", tbHeight);
+    });
+#else
+    g_engine->rootContext()->setContextProperty("_cuirq_titlebar_height", 0);
+#endif
+}
+
 void enable_sidebar_vibrancy(int width) {
 #ifdef Q_OS_MACOS
     if (!g_engine || g_engine->rootObjects().isEmpty()) {

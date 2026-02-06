@@ -20,7 +20,7 @@ Rectangle {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.topMargin: 16
+        anchors.topMargin: (_cuirq_titlebar_height ?? 0) + 16
         anchors.leftMargin: 12
         anchors.rightMargin: 13
         anchors.bottomMargin: 12

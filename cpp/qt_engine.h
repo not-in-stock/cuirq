@@ -34,6 +34,7 @@ void set_auto_reload(bool enabled);
 bool is_auto_reload_enabled();
 
 // Platform
+void hide_titlebar();
 void enable_sidebar_vibrancy(int width);
 void enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight);
 void set_vibrancy_appearance(const char* mode);

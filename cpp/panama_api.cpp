@@ -63,6 +63,10 @@ bool cuirq_is_auto_reload_enabled(void) {
     return cuirq::is_auto_reload_enabled();
 }
 
+void cuirq_hide_titlebar(void) {
+    cuirq::hide_titlebar();
+}
+
 void cuirq_enable_sidebar_vibrancy(int width) {
     cuirq::enable_sidebar_vibrancy(width);
 }

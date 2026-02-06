@@ -33,6 +33,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle SET_APP_NAME;
     private static final MethodHandle SET_AUTO_RELOAD;
     private static final MethodHandle IS_AUTO_RELOAD_ENABLED;
+    private static final MethodHandle HIDE_TITLEBAR;
     private static final MethodHandle ENABLE_SIDEBAR_VIBRANCY;
     private static final MethodHandle ENABLE_TOOLBAR_VIBRANCY;
     private static final MethodHandle SET_VIBRANCY_APPEARANCE;
@@ -90,6 +91,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_BOOLEAN));
         IS_AUTO_RELOAD_ENABLED = downcall("cuirq_is_auto_reload_enabled",
                 FunctionDescriptor.of(ValueLayout.JAVA_BOOLEAN));
+        HIDE_TITLEBAR = downcall("cuirq_hide_titlebar",
+                FunctionDescriptor.ofVoid());
         ENABLE_SIDEBAR_VIBRANCY = downcall("cuirq_enable_sidebar_vibrancy",
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT));
         ENABLE_TOOLBAR_VIBRANCY = downcall("cuirq_enable_toolbar_vibrancy",
@@ -278,6 +281,14 @@ public class PanamaBridge implements AutoCloseable {
             return (boolean) IS_AUTO_RELOAD_ENABLED.invokeExact();
         } catch (Throwable t) {
             throw new RuntimeException("Failed to check auto-reload", t);
+        }
+    }
+
+    public static void hideTitlebar() {
+        try {
+            HIDE_TITLEBAR.invokeExact();
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to hide titlebar", t);
         }
     }
 

@@ -214,7 +214,9 @@
         (let [qml-path (str (System/getProperty "user.dir") "/resources/file_manager.qml")]
           (when-not (cuirq/load-qml! qml-path)
             (throw (ex-info "Failed to load QML" {:path qml-path}))))
+        (cuirq/hide-titlebar!)
         (cuirq/enable-sidebar-vibrancy! 220)
+        (cuirq/enable-toolbar-vibrancy! 220 48)
 
         ;; Navigate to home directory
         (navigate-to! (System/getProperty "user.home"))

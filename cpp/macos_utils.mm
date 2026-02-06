@@ -18,6 +18,26 @@ void setMacOSAppName(const char* name) {
     }
 }
 
+int hideTitlebar(void* nativeWindowHandle) {
+    @autoreleasepool {
+        NSView *qtView = (__bridge NSView *)nativeWindowHandle;
+        NSWindow *window = [qtView window];
+        if (!window) {
+            std::cerr << "[CPP] hideTitlebar: no NSWindow found" << std::endl;
+            return 0;
+        }
+
+        window.styleMask |= NSWindowStyleMaskFullSizeContentView;
+        window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+        window.titlebarAppearsTransparent = YES;
+        window.titleVisibility = NSWindowTitleHidden;
+
+        int tbHeight = getTitlebarHeight(nativeWindowHandle);
+        std::cout << "[CPP] Titlebar hidden (height=" << tbHeight << ")" << std::endl;
+        return tbHeight;
+    }
+}
+
 void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth) {
     @autoreleasepool {
         NSView *qtView = (__bridge NSView *)nativeWindowHandle;
@@ -36,9 +56,10 @@ void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth) {
 
         if (!g_vibrancyViews) g_vibrancyViews = [NSMutableArray new];
 
-        // Sidebar: left edge, full height
+        // Sidebar: left edge, full window height (including titlebar)
+        // Use themeFrame bounds so vibrancy extends behind the titlebar (like Finder)
         NSVisualEffectView *sidebar = [[NSVisualEffectView alloc]
-            initWithFrame:NSMakeRect(0, 0, sidebarWidth, contentView.bounds.size.height)];
+            initWithFrame:NSMakeRect(0, 0, sidebarWidth, themeFrame.bounds.size.height)];
         sidebar.material = NSVisualEffectMaterialSidebar;
         sidebar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
         sidebar.state = NSVisualEffectStateActive;
@@ -63,13 +84,17 @@ void setupToolbarVibrancy(void* nativeWindowHandle, int sidebarWidth, int toolba
 
         if (!g_vibrancyViews) g_vibrancyViews = [NSMutableArray new];
 
-        // Toolbar: top-right area (NSView y=0 is bottom, so top = height - toolbarHeight)
-        CGFloat cvWidth = contentView.bounds.size.width;
-        CGFloat cvHeight = contentView.bounds.size.height;
+        // Titlebar height = difference between themeFrame and content layout rect
+        CGFloat titlebarHeight = themeFrame.bounds.size.height - window.contentLayoutRect.size.height;
+        CGFloat totalHeight = titlebarHeight + toolbarHeight;
 
+        CGFloat tfWidth = themeFrame.bounds.size.width;
+        CGFloat tfHeight = themeFrame.bounds.size.height;
+
+        // Toolbar vibrancy: covers titlebar + toolbar area on the right side
         NSVisualEffectView *toolbar = [[NSVisualEffectView alloc]
-            initWithFrame:NSMakeRect(sidebarWidth, cvHeight - toolbarHeight,
-                                     cvWidth - sidebarWidth, toolbarHeight)];
+            initWithFrame:NSMakeRect(sidebarWidth, tfHeight - totalHeight,
+                                     tfWidth - sidebarWidth, totalHeight)];
         toolbar.material = NSVisualEffectMaterialHeaderView;
         toolbar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
         toolbar.state = NSVisualEffectStateActive;
@@ -78,7 +103,8 @@ void setupToolbarVibrancy(void* nativeWindowHandle, int sidebarWidth, int toolba
         [themeFrame addSubview:toolbar positioned:NSWindowBelow relativeTo:contentView];
         [g_vibrancyViews addObject:toolbar];
 
-        std::cout << "[CPP] Toolbar vibrancy installed (height=" << toolbarHeight << ")" << std::endl;
+        std::cout << "[CPP] Toolbar vibrancy installed (titlebar=" << titlebarHeight
+                  << " toolbar=" << toolbarHeight << ")" << std::endl;
     }
 }
 
@@ -99,6 +125,17 @@ void setVibrancyAppearance(const char* mode) {
             v.appearance = appearance;
         }
         std::cout << "[CPP] Vibrancy appearance: " << mode << std::endl;
+    }
+}
+
+int getTitlebarHeight(void* nativeWindowHandle) {
+    @autoreleasepool {
+        NSView *qtView = (__bridge NSView *)nativeWindowHandle;
+        NSWindow *window = [qtView window];
+        if (!window) return 0;
+        NSView *themeFrame = [[window contentView] superview];
+        if (!themeFrame) return 0;
+        return (int)(themeFrame.bounds.size.height - window.contentLayoutRect.size.height);
     }
 }
 

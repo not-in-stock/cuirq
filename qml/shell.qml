@@ -13,6 +13,7 @@ ApplicationWindow {
     Loader {
         id: contentLoader
         anchors.fill: parent
+        anchors.topMargin: _cuirq_titlebar_height ? -_cuirq_titlebar_height : 0
         source: _cuirq_content_url
 
         onStatusChanged: {

@@ -73,6 +73,13 @@
   []
   (PanamaBridge/isAutoReloadEnabled))
 
+(defn hide-titlebar!
+  "Hide the native titlebar for a seamless window look (macOS).
+   Applies fullSizeContentView, transparent titlebar, hidden title,
+   and exposes titlebar height to QML for layout offset."
+  []
+  (PanamaBridge/hideTitlebar))
+
 (defn enable-sidebar-vibrancy!
   "Enable macOS sidebar vibrancy effect (NSVisualEffectView).
    Width is the sidebar width in pixels."
