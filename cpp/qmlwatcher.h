@@ -21,7 +21,7 @@ public:
     explicit QmlWatcher(QQmlApplicationEngine* engine, QObject *parent = nullptr);
     ~QmlWatcher() override;
 
-    // Watch a QML file for changes
+    // Watch a QML file and its directory for changes
     void watchFile(const QString& filePath);
 
     // Stop watching a file
@@ -33,17 +33,15 @@ public:
 
 private slots:
     void onFileChanged(const QString& path);
+    void onDirectoryChanged(const QString& path);
 
 private:
     QQmlApplicationEngine* m_engine;
     QFileSystemWatcher* m_watcher;
     bool m_autoReload;
     QString m_currentQmlPath;
-    QMap<QString, QVariant> m_savedProperties; // For preserving state during reload
 
-    void reloadQml(const QString& path);
-    void saveContextProperties();
-    void restoreContextProperties();
+    void reloadContent();
 };
 
 #endif // QMLWATCHER_H
