@@ -221,7 +221,7 @@
                 (let [items (list-directory current-path)]
                   (when (not= items @last-listing)
                     (reset! last-listing items)
-                    (models/set-data! :files items)
+                    (models/update-data! :files items "path")
                     (state/update-state! assoc :itemCount (count items))))))))
 
         (cuirq/on-signal! :themeChanged

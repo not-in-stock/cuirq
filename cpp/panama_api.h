@@ -22,6 +22,7 @@ void cuirq_register_signal(const char* name);
 
 void cuirq_create_model(const char* name);
 void cuirq_set_model_data(const char* name, const char* json_data);
+void cuirq_update_model_data(const char* name, const char* json_data, const char* key_field);
 void cuirq_clear_model(const char* name);
 int  cuirq_get_model_count(const char* name);
 

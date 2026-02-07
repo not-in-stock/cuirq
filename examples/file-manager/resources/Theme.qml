@@ -36,4 +36,6 @@ QtObject {
     readonly property int animHoverDuration: 100   // hover highlight
     readonly property int animViewDuration:  250   // content fade/slide on navigation
     readonly property real animViewOffset:   8     // slide distance (px)
+    readonly property int animItemDuration:  200   // add/remove/displaced item transitions
+    readonly property real animItemScale:    0.8   // scale-from for add, scale-to for remove
 }

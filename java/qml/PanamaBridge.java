@@ -28,6 +28,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle REGISTER_SIGNAL;
     private static final MethodHandle CREATE_MODEL;
     private static final MethodHandle SET_MODEL_DATA;
+    private static final MethodHandle UPDATE_MODEL_DATA;
     private static final MethodHandle CLEAR_MODEL;
     private static final MethodHandle GET_MODEL_COUNT;
     private static final MethodHandle SET_APP_NAME;
@@ -83,6 +84,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         SET_MODEL_DATA = downcall("cuirq_set_model_data",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS));
+        UPDATE_MODEL_DATA = downcall("cuirq_update_model_data",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS));
         CLEAR_MODEL = downcall("cuirq_clear_model",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         GET_MODEL_COUNT = downcall("cuirq_get_model_count",
@@ -244,6 +247,17 @@ public class PanamaBridge implements AutoCloseable {
             SET_MODEL_DATA.invokeExact(nameStr, dataStr);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to set model data", t);
+        }
+    }
+
+    public static void updateModelData(String modelName, String jsonData, String keyField) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameStr = arena.allocateFrom(modelName);
+            MemorySegment dataStr = arena.allocateFrom(jsonData);
+            MemorySegment keyStr = arena.allocateFrom(keyField);
+            UPDATE_MODEL_DATA.invokeExact(nameStr, dataStr, keyStr);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to update model data", t);
         }
     }
 

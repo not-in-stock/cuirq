@@ -87,6 +87,18 @@ Rectangle {
             }
         }
 
+        add: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.animItemDuration }
+            NumberAnimation { property: "scale"; from: Theme.animItemScale; to: 1; duration: Theme.animItemDuration }
+        }
+        remove: Transition {
+            NumberAnimation { property: "opacity"; to: 0; duration: Theme.animItemDuration }
+            NumberAnimation { property: "scale"; to: Theme.animItemScale; duration: Theme.animItemDuration }
+        }
+        displaced: Transition {
+            NumberAnimation { properties: "x,y"; duration: Theme.animItemDuration; easing.type: Easing.OutCubic }
+        }
+
         ScrollBar.vertical: ScrollBar {
             policy: ScrollBar.AsNeeded
         }

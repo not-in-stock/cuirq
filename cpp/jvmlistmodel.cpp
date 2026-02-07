@@ -87,6 +87,81 @@ void JvmListModel::setJsonData(const QString& jsonData)
   qDebug() << "[CPP] Roles:" << m_roleNames;
 }
 
+void JvmListModel::updateJsonData(const QString& jsonData, const QString& keyField)
+{
+    QJsonDocument doc = QJsonDocument::fromJson(jsonData.toUtf8());
+    if (!doc.isArray()) {
+        qWarning() << "[CPP] ERROR: JSON data is not an array";
+        return;
+    }
+
+    QJsonArray jsonArray = doc.array();
+
+    // Parse new items
+    QVector<QVariantMap> newItems;
+    newItems.reserve(jsonArray.size());
+    for (const QJsonValue& value : jsonArray) {
+        if (!value.isObject()) continue;
+        QJsonObject obj = value.toObject();
+        QVariantMap item;
+        for (auto it = obj.begin(); it != obj.end(); ++it) {
+            item.insert(it.key(), it.value().toVariant());
+        }
+        updateRoleNames(item);
+        newItems.append(item);
+    }
+
+    // Build set of new keys
+    QSet<QString> newKeys;
+    for (const auto& item : newItems) {
+        newKeys.insert(item.value(keyField).toString());
+    }
+
+    // 1. Remove old items not in new set (walk backwards)
+    for (int i = m_items.size() - 1; i >= 0; --i) {
+        QString key = m_items[i].value(keyField).toString();
+        if (!newKeys.contains(key)) {
+            beginRemoveRows(QModelIndex(), i, i);
+            m_items.removeAt(i);
+            endRemoveRows();
+        }
+    }
+
+    // 2. Build set of surviving keys
+    QSet<QString> survivingKeys;
+    for (const auto& item : m_items) {
+        survivingKeys.insert(item.value(keyField).toString());
+    }
+
+    // 3. Insert new items at correct positions
+    for (int i = 0; i < newItems.size(); ++i) {
+        QString key = newItems[i].value(keyField).toString();
+        if (!survivingKeys.contains(key)) {
+            beginInsertRows(QModelIndex(), i, i);
+            m_items.insert(i, newItems[i]);
+            endInsertRows();
+            survivingKeys.insert(key);
+        }
+    }
+
+    // 4. Update data for surviving items and fix order
+    // At this point m_items has the right set of keys but possibly wrong order/data.
+    // Walk through newItems and ensure m_items matches.
+    for (int newIdx = 0; newIdx < newItems.size(); ++newIdx) {
+        if (newIdx >= m_items.size()) break;
+        QString newKey = newItems[newIdx].value(keyField).toString();
+        QString oldKey = m_items[newIdx].value(keyField).toString();
+        if (oldKey == newKey) {
+            // Same position — check if data changed
+            if (m_items[newIdx] != newItems[newIdx]) {
+                m_items[newIdx] = newItems[newIdx];
+                QModelIndex idx = index(newIdx);
+                emit dataChanged(idx, idx);
+            }
+        }
+    }
+}
+
 void JvmListModel::clear()
 {
   qDebug() << "[CPP] JvmListModel::clear called";

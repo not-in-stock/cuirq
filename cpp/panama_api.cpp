@@ -47,6 +47,10 @@ void cuirq_set_model_data(const char* name, const char* json_data) {
     cuirq::set_model_data(name, json_data);
 }
 
+void cuirq_update_model_data(const char* name, const char* json_data, const char* key_field) {
+    cuirq::update_model_data(name, json_data, key_field);
+}
+
 void cuirq_clear_model(const char* name) {
     cuirq::clear_model(name);
 }

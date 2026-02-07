@@ -26,6 +26,7 @@ void register_signal_handler(const char* name);
 // Models
 void create_model(const char* name);
 void set_model_data(const char* name, const char* json_data);
+void update_model_data(const char* name, const char* json_data, const char* key_field);
 void clear_model(const char* name);
 int get_model_count(const char* name);
 

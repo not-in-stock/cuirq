@@ -36,6 +36,18 @@
     (println (str "[CLJ] Set data for model: " (name model-name)
                   " (" (count data) " items)"))))
 
+(defn update-data!
+  "Incrementally update model data, enabling add/remove animations.
+
+   Uses a key field to diff old vs new items and emits
+   beginInsertRows/beginRemoveRows instead of beginResetModel.
+
+   Example:
+     (update-data! :files items \"path\")"
+  [model-name data key-field]
+  (let [json-str (json/write-str data)]
+    (PanamaBridge/updateModelData (name model-name) json-str ^String key-field)))
+
 (defn clear!
   "Clear all items from a model."
   [model-name]

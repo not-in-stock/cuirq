@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QString>
+#include <QSet>
 
 /**
  * JvmListModel - QAbstractListModel for JVM data
@@ -30,6 +31,7 @@ public:
 
     // Data management
     Q_INVOKABLE void setJsonData(const QString& jsonData);
+    void updateJsonData(const QString& jsonData, const QString& keyField);
     Q_INVOKABLE void clear();
     Q_INVOKABLE int count() const { return m_items.size(); }
 

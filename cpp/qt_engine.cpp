@@ -311,6 +311,16 @@ void set_model_data(const char* name, const char* json_data) {
     model->setJsonData(QString::fromUtf8(json_data));
 }
 
+void update_model_data(const char* name, const char* json_data, const char* key_field) {
+    QString qname = QString::fromUtf8(name);
+    JvmListModel* model = g_models.value(qname, nullptr);
+    if (!model) {
+        std::cerr << "[CPP] ERROR: Model not found: " << name << std::endl;
+        return;
+    }
+    model->updateJsonData(QString::fromUtf8(json_data), QString::fromUtf8(key_field));
+}
+
 void clear_model(const char* name) {
     QString qname = QString::fromUtf8(name);
     JvmListModel* model = g_models.value(qname, nullptr);
