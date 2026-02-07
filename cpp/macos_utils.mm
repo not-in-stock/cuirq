@@ -62,7 +62,7 @@ void setupSidebarVibrancy(void* nativeWindowHandle, int sidebarWidth) {
             initWithFrame:NSMakeRect(0, 0, sidebarWidth, themeFrame.bounds.size.height)];
         sidebar.material = NSVisualEffectMaterialSidebar;
         sidebar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-        sidebar.state = NSVisualEffectStateActive;
+        sidebar.state = NSVisualEffectStateFollowsWindowActiveState;
         sidebar.autoresizingMask = NSViewHeightSizable;
 
         [themeFrame addSubview:sidebar positioned:NSWindowBelow relativeTo:contentView];
@@ -97,7 +97,7 @@ void setupToolbarVibrancy(void* nativeWindowHandle, int sidebarWidth, int toolba
                                      tfWidth - sidebarWidth, totalHeight)];
         toolbar.material = NSVisualEffectMaterialHeaderView;
         toolbar.blendingMode = NSVisualEffectBlendingModeBehindWindow;
-        toolbar.state = NSVisualEffectStateActive;
+        toolbar.state = NSVisualEffectStateFollowsWindowActiveState;
         toolbar.autoresizingMask = NSViewWidthSizable | NSViewMinYMargin;
 
         [themeFrame addSubview:toolbar positioned:NSWindowBelow relativeTo:contentView];
