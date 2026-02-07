@@ -22,10 +22,10 @@ Rectangle {
     ListView {
         id: listView
         anchors.fill: parent
-        anchors.leftMargin: 8
-        anchors.rightMargin: 8
-        anchors.bottomMargin: 8
         topMargin: 56
+        bottomMargin: 8
+        leftMargin: 8
+        rightMargin: 8
         clip: true
         spacing: 1
 
@@ -33,7 +33,7 @@ Rectangle {
 
         delegate: Rectangle {
             id: listItem
-            width: listView.width
+            width: listView.width - listView.leftMargin - listView.rightMargin
             height: 40
             radius: 6
             color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
@@ -99,8 +99,6 @@ Rectangle {
             NumberAnimation { properties: "x,y"; duration: Theme.animItemDuration; easing.type: Easing.OutCubic }
         }
 
-        ScrollBar.vertical: OverlayScrollBar {}
-
         Text {
             anchors.centerIn: parent
             text: "This folder is empty"
@@ -108,5 +106,13 @@ Rectangle {
             color: Theme.textSecondary
             visible: listView.count === 0
         }
+    }
+
+    OverlayScrollBar {
+        flickable: listView
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.topMargin: 48
+        anchors.bottom: parent.bottom
     }
 }

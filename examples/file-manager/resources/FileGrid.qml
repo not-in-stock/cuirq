@@ -9,10 +9,8 @@ Rectangle {
     GridView {
         id: gridView
         anchors.fill: parent
-        anchors.topMargin: 0
-        anchors.leftMargin: 20
-        anchors.rightMargin: 0
         topMargin: 48
+        leftMargin: 20
         cellWidth: 150
         cellHeight: 150
         clip: true
@@ -39,8 +37,6 @@ Rectangle {
             NumberAnimation { properties: "x,y"; duration: Theme.animItemDuration; easing.type: Easing.OutCubic }
         }
 
-        ScrollBar.vertical: OverlayScrollBar {}
-
         Text {
             anchors.centerIn: parent
             text: "This folder is empty"
@@ -48,5 +44,13 @@ Rectangle {
             color: Theme.textSecondary
             visible: gridView.count === 0
         }
+    }
+
+    OverlayScrollBar {
+        flickable: gridView
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.topMargin: 48
+        anchors.bottom: parent.bottom
     }
 }
