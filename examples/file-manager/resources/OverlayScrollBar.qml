@@ -50,18 +50,18 @@ ScrollBar {
 
     Timer {
         id: hideTimer
-        interval: Theme.scrollbarFadeDelay
+        interval: theme.scrollbarFadeDelay
         onTriggered: root._show = false
     }
 
     contentItem: Rectangle {
-        implicitWidth: Theme.scrollbarWidth
-        radius: Theme.scrollbarRadius
-        color: Theme.scrollbarColor
+        implicitWidth: theme.scrollbarWidth
+        radius: theme.scrollbarRadius
+        color: theme.scrollbarColor
         opacity: root._show ? 1 : 0
 
         Behavior on opacity {
-            NumberAnimation { duration: Theme.scrollbarFadeDuration }
+            NumberAnimation { duration: theme.scrollbarFadeDuration }
         }
     }
 

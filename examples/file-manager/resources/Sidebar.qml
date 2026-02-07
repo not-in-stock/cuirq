@@ -21,7 +21,7 @@ Rectangle {
         "music":     _home + "/Music"
     })
 
-    width: Theme.sidebarWidth
+    width: theme.sidebarWidth
     color: "transparent"
 
     // Right border
@@ -30,8 +30,8 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: Theme.separator
-        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+        color: theme.separator
+        Behavior on color { ColorAnimation { duration: theme.animDuration } }
     }
 
     ColumnLayout {
@@ -48,7 +48,7 @@ Rectangle {
             font.pixelSize: 11
             font.bold: true
             font.letterSpacing: 0.5
-            color: Theme.textTertiary
+            color: theme.textTertiary
             Layout.leftMargin: 10
             Layout.bottomMargin: 6
         }
@@ -74,10 +74,10 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: isActive || sidebarMouse.containsMouse ? Theme.sidebarActive : Theme.sidebarActiveOff
+                color: isActive || sidebarMouse.containsMouse ? theme.sidebarActive : theme.sidebarActiveOff
 
-                Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
-                Behavior on border.color { ColorAnimation { duration: Theme.animHoverDuration } }
+                Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
+                Behavior on border.color { ColorAnimation { duration: theme.animHoverDuration } }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
@@ -95,7 +95,7 @@ Rectangle {
                     Text {
                         text: label
                         font.pixelSize: 13
-                        color: Theme.textPrimary
+                        color: theme.textPrimary
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }

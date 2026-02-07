@@ -6,6 +6,7 @@
 #include <QQmlApplicationEngine>
 #include <QString>
 #include <QMap>
+#include <QTimer>
 
 class StateObject;
 
@@ -41,11 +42,14 @@ private slots:
 private:
     QQmlApplicationEngine* m_engine;
     QFileSystemWatcher* m_watcher;
+    QTimer* m_debounce;
     StateObject* m_state;
+    QObject* m_themeObject;
     bool m_autoReload;
     QString m_currentQmlPath;
 
     void reloadContent();
+    void loadTheme(const QString& contentDir);
 };
 
 #endif // QMLWATCHER_H

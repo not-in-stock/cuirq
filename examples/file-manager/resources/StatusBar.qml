@@ -8,16 +8,16 @@ Rectangle {
     property string currentPath: ""
 
     height: 32
-    color: Theme.background
-    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+    color: theme.background
+    Behavior on color { ColorAnimation { duration: theme.animDuration } }
 
     Rectangle {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
         height: 1
-        color: Theme.border
-        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+        color: theme.border
+        Behavior on color { ColorAnimation { duration: theme.animDuration } }
     }
 
     RowLayout {
@@ -29,7 +29,7 @@ Rectangle {
         Text {
             text: statusBar.itemCount + " items"
             font.pixelSize: 12
-            color: Theme.textSecondary
+            color: theme.textSecondary
         }
 
         Item { Layout.fillWidth: true }
@@ -37,7 +37,7 @@ Rectangle {
         Text {
             text: statusBar.currentPath
             font.pixelSize: 12
-            color: Theme.textTertiary
+            color: theme.textTertiary
             elide: Text.ElideMiddle
             Layout.maximumWidth: 400
         }

@@ -54,15 +54,15 @@ Item {
                 anchors.right: parent.right
                 anchors.bottom: statusBar.top
                 clip: true
-                color: Theme.background
-                Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                color: theme.background
+                Behavior on color { ColorAnimation { duration: theme.animDuration } }
 
                 FileGrid {
                     id: gridView
                     anchors.fill: parent
                     visible: root.viewMode === "grid"
                     opacity: 0
-                    transform: Translate { id: gridTranslate; y: Theme.animViewOffset }
+                    transform: Translate { id: gridTranslate; y: theme.animViewOffset }
                 }
 
                 FileList {
@@ -70,19 +70,19 @@ Item {
                     anchors.fill: parent
                     visible: root.viewMode === "list"
                     opacity: 0
-                    transform: Translate { id: listTranslate; y: Theme.animViewOffset }
+                    transform: Translate { id: listTranslate; y: theme.animViewOffset }
                 }
 
                 ParallelAnimation {
                     id: gridFadeIn
-                    NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: gridTranslate; property: "y"; from: Theme.animViewOffset; to: 0; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: gridView; property: "opacity"; from: 0; to: 1; duration: theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: gridTranslate; property: "y"; from: theme.animViewOffset; to: 0; duration: theme.animViewDuration; easing.type: Easing.OutQuad }
                 }
 
                 ParallelAnimation {
                     id: listFadeIn
-                    NumberAnimation { target: listView; property: "opacity"; from: 0; to: 1; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: listTranslate; property: "y"; from: Theme.animViewOffset; to: 0; duration: Theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: listView; property: "opacity"; from: 0; to: 1; duration: theme.animViewDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: listTranslate; property: "y"; from: theme.animViewOffset; to: 0; duration: theme.animViewDuration; easing.type: Easing.OutQuad }
                 }
 
                 Connections {
@@ -130,8 +130,8 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: Theme.toolbarOverlay
-                    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+                    color: theme.toolbarOverlay
+                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
                 }
             }
 
@@ -148,10 +148,10 @@ Item {
                 viewMode: root.viewMode
                 onViewModeRequested: (mode) => root.viewMode = mode
                 onThemeCycled: {
-                    let next = Theme.themeMode === "system" ? "light"
-                             : Theme.themeMode === "light"  ? "dark"
+                    let next = theme.themeMode === "system" ? "light"
+                             : theme.themeMode === "light"  ? "dark"
                              : "system"
-                    Theme.themeMode = next
+                    theme.themeMode = next
                     signalForwarder.emitSignal("themeChanged", [next])
                 }
             }

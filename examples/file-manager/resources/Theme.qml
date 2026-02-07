@@ -1,4 +1,3 @@
-pragma Singleton
 import QtQuick
 
 QtObject {
@@ -24,6 +23,7 @@ QtObject {
     readonly property color surfaceHoverOff:   Qt.alpha(surfaceHover, 0)
     readonly property color surfaceActive:     darkMode ? Qt.rgba(0.2, 0.25, 0.33, 0.3) : Qt.rgba(0, 0, 0, 0.1)
     readonly property color surfaceActiveOff:  Qt.alpha(surfaceActive, 0)
+
     readonly property color sidebarActive:     darkMode ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.1)
     readonly property color sidebarActiveOff:  Qt.alpha(sidebarActive, 0)
     readonly property color border:            darkMode ? "#334155" : "#E2E8F0"

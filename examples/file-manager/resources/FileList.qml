@@ -3,8 +3,8 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileList
-    color: Theme.background
-    Behavior on color { ColorAnimation { duration: Theme.animDuration } }
+    color: theme.background
+    Behavior on color { ColorAnimation { duration: theme.animDuration } }
 
     function iconSource(type) {
         switch (type) {
@@ -22,23 +22,23 @@ Rectangle {
     ListView {
         id: listView
         anchors.fill: parent
-        topMargin: Theme.toolbarHeight + Theme.listPadding
-        bottomMargin: Theme.listPadding
-        leftMargin: Theme.listPadding
-        rightMargin: Theme.listPadding
+        topMargin: theme.toolbarHeight + theme.listPadding
+        bottomMargin: theme.listPadding
+        leftMargin: theme.listPadding
+        rightMargin: theme.listPadding
         clip: true
-        spacing: Theme.listItemSpacing
+        spacing: theme.listItemSpacing
 
         model: files
 
         delegate: Rectangle {
             id: listItem
             width: listView.width - listView.leftMargin - listView.rightMargin
-            height: Theme.listItemHeight
+            height: theme.listItemHeight
             radius: 6
-            color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
+            color: listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
-            Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
+            Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter
@@ -58,7 +58,7 @@ Rectangle {
                 Text {
                     text: model.name
                     font.pixelSize: 13
-                    color: Theme.textPrimary
+                    color: theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 36
@@ -72,7 +72,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 text: model.isDir ? "" : model.size
                 font.pixelSize: 12
-                color: Theme.textTertiary
+                color: theme.textTertiary
             }
 
             MouseArea {
@@ -88,22 +88,22 @@ Rectangle {
         }
 
         add: Transition {
-            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Theme.animItemDuration }
-            NumberAnimation { property: "scale"; from: Theme.animItemScale; to: 1; duration: Theme.animItemDuration }
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: theme.animItemDuration }
+            NumberAnimation { property: "scale"; from: theme.animItemScale; to: 1; duration: theme.animItemDuration }
         }
         remove: Transition {
-            NumberAnimation { property: "opacity"; to: 0; duration: Theme.animItemDuration }
-            NumberAnimation { property: "scale"; to: Theme.animItemScale; duration: Theme.animItemDuration }
+            NumberAnimation { property: "opacity"; to: 0; duration: theme.animItemDuration }
+            NumberAnimation { property: "scale"; to: theme.animItemScale; duration: theme.animItemDuration }
         }
         displaced: Transition {
-            NumberAnimation { properties: "x,y"; duration: Theme.animItemDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { properties: "x,y"; duration: theme.animItemDuration; easing.type: Easing.OutCubic }
         }
 
         Text {
             anchors.centerIn: parent
             text: "This folder is empty"
             font.pixelSize: 16
-            color: Theme.textSecondary
+            color: theme.textSecondary
             visible: listView.count === 0
         }
     }
@@ -112,7 +112,7 @@ Rectangle {
         flickable: listView
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.topMargin: Theme.toolbarHeight
+        anchors.topMargin: theme.toolbarHeight
         anchors.bottom: parent.bottom
     }
 }

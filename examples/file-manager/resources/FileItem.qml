@@ -12,9 +12,9 @@ Rectangle {
     width: 130
     height: 140
     radius: 10
-    color: mouseArea.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
+    color: mouseArea.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
-    Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
+    Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
 
     function iconSource(type) {
         switch (type) {
@@ -45,7 +45,7 @@ Rectangle {
         Text {
             text: fileItem.fileName
             font.pixelSize: 12
-            color: Theme.textPrimary
+            color: theme.textPrimary
             width: 118
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
@@ -57,7 +57,7 @@ Rectangle {
         Text {
             text: fileItem.fileSize
             font.pixelSize: 11
-            color: Theme.textTertiary
+            color: theme.textTertiary
             anchors.horizontalCenter: parent.horizontalCenter
             visible: !fileItem.isDir
         }

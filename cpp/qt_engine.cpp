@@ -225,6 +225,11 @@ bool load_qml(const char* path) {
     QString contentDir = QFileInfo(contentPath).absolutePath();
     g_engine->addImportPath(contentDir);
 
+    // Set up file watching + Theme context property BEFORE loading content
+    if (g_qmlWatcher) {
+        g_qmlWatcher->watchFile(contentPath);
+    }
+
     if (!g_shellLoaded) {
         // First load: set content URL and load the shell
         QString shellPath = findShellQmlPath();
@@ -250,10 +255,6 @@ bool load_qml(const char* path) {
         // Subsequent loads: just update the content URL (Loader picks it up)
         std::cout << "[CPP] Updating content URL: " << contentPath.toStdString() << std::endl;
         g_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
-    }
-
-    if (g_qmlWatcher) {
-        g_qmlWatcher->watchFile(contentPath);
     }
 
     return true;
