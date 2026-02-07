@@ -131,8 +131,7 @@ Item {
 
                 Rectangle {
                     anchors.fill: parent
-                    color: Theme.darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
-                                          : Qt.rgba(1, 1, 1, 0.65)
+                    color: Theme.toolbarOverlay
                     Behavior on color { ColorAnimation { duration: Theme.animDuration } }
                 }
             }

@@ -99,9 +99,7 @@ Rectangle {
             NumberAnimation { properties: "x,y"; duration: Theme.animItemDuration; easing.type: Easing.OutCubic }
         }
 
-        ScrollBar.vertical: ScrollBar {
-            policy: ScrollBar.AsNeeded
-        }
+        ScrollBar.vertical: OverlayScrollBar {}
 
         Text {
             anchors.centerIn: parent

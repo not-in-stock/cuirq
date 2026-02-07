@@ -16,6 +16,8 @@ QtObject {
     // Backgrounds
     readonly property color background:        darkMode ? "#1E293B" : "#FFFFFF"
     readonly property color sidebarBackground: "transparent"
+    readonly property color toolbarOverlay:    darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
+                                                        : Qt.rgba(1, 1, 1, 0.65)
 
     // Surfaces & interactive
     readonly property color surfaceHover:      darkMode ? "#334155" : "#F1F5F9"
@@ -38,4 +40,11 @@ QtObject {
     readonly property real animViewOffset:   8     // slide distance (px)
     readonly property int animItemDuration:  200   // add/remove/displaced item transitions
     readonly property real animItemScale:    0.8   // scale-from for add, scale-to for remove
+
+    // Scrollbar
+    readonly property color scrollbarColor:    darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)
+    readonly property real scrollbarWidth:     6
+    readonly property real scrollbarRadius:    3
+    readonly property int scrollbarFadeDelay:  800   // ms before auto-hide
+    readonly property int scrollbarFadeDuration: 300 // fade animation ms
 }
