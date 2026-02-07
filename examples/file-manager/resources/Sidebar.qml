@@ -6,7 +6,7 @@ Rectangle {
 
     property string currentPath: ""
 
-    width: 220
+    width: Theme.sidebarWidth
     color: "transparent"
 
     // Right border

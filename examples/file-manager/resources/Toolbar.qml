@@ -12,7 +12,7 @@ Rectangle {
     signal viewModeRequested(string mode)
     signal themeCycled()
 
-    height: 48
+    height: Theme.toolbarHeight
     color: "transparent"
 
     // Bottom border

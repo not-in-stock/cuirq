@@ -41,6 +41,16 @@ QtObject {
     readonly property int animItemDuration:  200   // add/remove/displaced item transitions
     readonly property real animItemScale:    0.8   // scale-from for add, scale-to for remove
 
+    // Layout
+    readonly property int toolbarHeight:    48
+    readonly property int sidebarWidth:     220
+    readonly property int gridCellWidth:    150
+    readonly property int gridCellHeight:   150
+    readonly property int gridPadding:      20    // left inset for grid content
+    readonly property int listPadding:      8     // inset for list content
+    readonly property int listItemHeight:   40
+    readonly property int listItemSpacing:  1
+
     // Scrollbar
     readonly property color scrollbarColor:    darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)
     readonly property real scrollbarWidth:     6

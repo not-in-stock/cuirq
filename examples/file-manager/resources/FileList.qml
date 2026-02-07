@@ -22,19 +22,19 @@ Rectangle {
     ListView {
         id: listView
         anchors.fill: parent
-        topMargin: 56
-        bottomMargin: 8
-        leftMargin: 8
-        rightMargin: 8
+        topMargin: Theme.toolbarHeight + Theme.listPadding
+        bottomMargin: Theme.listPadding
+        leftMargin: Theme.listPadding
+        rightMargin: Theme.listPadding
         clip: true
-        spacing: 1
+        spacing: Theme.listItemSpacing
 
         model: files
 
         delegate: Rectangle {
             id: listItem
             width: listView.width - listView.leftMargin - listView.rightMargin
-            height: 40
+            height: Theme.listItemHeight
             radius: 6
             color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
@@ -112,7 +112,7 @@ Rectangle {
         flickable: listView
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.topMargin: 48
+        anchors.topMargin: Theme.toolbarHeight
         anchors.bottom: parent.bottom
     }
 }

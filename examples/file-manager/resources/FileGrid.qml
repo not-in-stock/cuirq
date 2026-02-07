@@ -9,10 +9,10 @@ Rectangle {
     GridView {
         id: gridView
         anchors.fill: parent
-        topMargin: 48
-        leftMargin: 20
-        cellWidth: 150
-        cellHeight: 150
+        topMargin: Theme.toolbarHeight
+        leftMargin: Theme.gridPadding
+        cellWidth: Theme.gridCellWidth
+        cellHeight: Theme.gridCellHeight
         clip: true
 
         model: files
@@ -50,7 +50,7 @@ Rectangle {
         flickable: gridView
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.topMargin: 48
+        anchors.topMargin: Theme.toolbarHeight
         anchors.bottom: parent.bottom
     }
 }
