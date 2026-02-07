@@ -21,7 +21,8 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: Qt.rgba(0, 0, 0, 0.1)
+        color: Theme.separator
+        Behavior on color { ColorAnimation { duration: Theme.animDuration } }
     }
 
     RowLayout {
