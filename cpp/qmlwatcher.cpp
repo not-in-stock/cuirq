@@ -1,4 +1,5 @@
 #include "qmlwatcher.h"
+#include "stateobject.h"
 #include <QDebug>
 #include <QUrl>
 #include <QQmlContext>
@@ -10,6 +11,7 @@ QmlWatcher::QmlWatcher(QQmlApplicationEngine* engine, QObject *parent)
     : QObject(parent)
     , m_engine(engine)
     , m_watcher(new QFileSystemWatcher(this))
+    , m_state(nullptr)
     , m_autoReload(true)
 {
     qDebug() << "[CPP] QmlWatcher created";
@@ -38,8 +40,19 @@ void QmlWatcher::watchFile(const QString& filePath)
         }
     }
 
-    // Watch the directory (for sibling component changes)
+    // Watch all .qml files in the same directory (Theme, components, etc.)
     QString dir = QFileInfo(filePath).absolutePath();
+    QDir qmlDir(dir);
+    for (const QString& entry : qmlDir.entryList({"*.qml"}, QDir::Files)) {
+        QString fullPath = qmlDir.absoluteFilePath(entry);
+        if (!m_watcher->files().contains(fullPath)) {
+            if (m_watcher->addPath(fullPath)) {
+                qDebug() << "[CPP] QmlWatcher: Watching" << entry;
+            }
+        }
+    }
+
+    // Watch the directory (for new/deleted files)
     if (!m_watcher->directories().contains(dir)) {
         if (m_watcher->addPath(dir)) {
             qDebug() << "[CPP] QmlWatcher: Watching directory" << dir;
@@ -56,6 +69,11 @@ void QmlWatcher::unwatchFile(const QString& filePath)
     if (m_watcher->directories().contains(dir)) {
         m_watcher->removePath(dir);
     }
+}
+
+void QmlWatcher::setStateObject(StateObject* state)
+{
+    m_state = state;
 }
 
 void QmlWatcher::setAutoReload(bool enabled)
@@ -110,6 +128,12 @@ void QmlWatcher::reloadContent()
     QTimer::singleShot(0, this, [this, contentUrl]() {
         m_engine->clearComponentCache();
         m_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
+        // Step 3: Re-emit state so Connections in fresh QML pick up current values
+        if (m_state) {
+            QTimer::singleShot(0, this, [this]() {
+                m_state->reemitAll();
+            });
+        }
         qDebug() << "[CPP] QmlWatcher: Reload complete";
     });
 }

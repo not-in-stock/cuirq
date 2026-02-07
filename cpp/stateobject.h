@@ -30,6 +30,7 @@ public:
     Q_INVOKABLE void setProp(const QString& name, const QVariant& value);
     Q_INVOKABLE QVariant getProp(const QString& name) const;
     Q_INVOKABLE bool hasProp(const QString& name) const;
+    void reemitAll();
 
 private:
     StateNotifier* m_notifier;

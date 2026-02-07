@@ -7,6 +7,8 @@
 #include <QString>
 #include <QMap>
 
+class StateObject;
+
 /**
  * QmlWatcher - Watches QML files and triggers automatic reload on changes.
  *
@@ -19,6 +21,7 @@ class QmlWatcher : public QObject
 
 public:
     explicit QmlWatcher(QQmlApplicationEngine* engine, QObject *parent = nullptr);
+    void setStateObject(StateObject* state);
     ~QmlWatcher() override;
 
     // Watch a QML file and its directory for changes
@@ -38,6 +41,7 @@ private slots:
 private:
     QQmlApplicationEngine* m_engine;
     QFileSystemWatcher* m_watcher;
+    StateObject* m_state;
     bool m_autoReload;
     QString m_currentQmlPath;
 

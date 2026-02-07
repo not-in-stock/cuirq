@@ -17,21 +17,20 @@ Item {
     property var breadcrumbs: []
     property string viewMode: "grid"
 
+    function applyState(key, value) {
+        if (key === "currentPath") root.currentPath = value
+        else if (key === "canGoBack") root.canGoBack = (value === "true")
+        else if (key === "canGoForward") root.canGoForward = (value === "true")
+        else if (key === "itemCount") root.itemCount = parseInt(value) || 0
+        else if (key === "breadcrumbs") {
+            try { root.breadcrumbs = JSON.parse(value) }
+            catch (e) { root.breadcrumbs = [] }
+        }
+    }
+
     Connections {
         target: stateNotifier
-        function onPropChanged(key, value) {
-            if (key === "currentPath") root.currentPath = value
-            else if (key === "canGoBack") root.canGoBack = (value === "true")
-            else if (key === "canGoForward") root.canGoForward = (value === "true")
-            else if (key === "itemCount") root.itemCount = parseInt(value) || 0
-            else if (key === "breadcrumbs") {
-                try {
-                    root.breadcrumbs = JSON.parse(value)
-                } catch (e) {
-                    root.breadcrumbs = []
-                }
-            }
-        }
+        function onPropChanged(key, value) { root.applyState(key, value) }
     }
 
     RowLayout {

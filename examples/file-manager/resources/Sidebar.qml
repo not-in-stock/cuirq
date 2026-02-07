@@ -1,10 +1,25 @@
 import QtQuick
 import QtQuick.Layouts
+import QtCore
 
 Rectangle {
     id: sidebar
 
     property string currentPath: ""
+
+    function _toPath(url) {
+        return url.toString().replace("file://", "")
+    }
+
+    readonly property string _home: _toPath(StandardPaths.writableLocation(StandardPaths.HomeLocation))
+    readonly property var _pathMap: ({
+        "home":      _home,
+        "desktop":   _home + "/Desktop",
+        "documents": _home + "/Documents",
+        "downloads": _home + "/Downloads",
+        "pictures":  _home + "/Pictures",
+        "music":     _home + "/Music"
+    })
 
     width: Theme.sidebarWidth
     color: "transparent"
@@ -54,12 +69,15 @@ Rectangle {
                 required property string iconFile
                 required property string key
 
+                readonly property bool isActive: sidebar.currentPath === (sidebar._pathMap[key] ?? "")
+
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: sidebarMouse.containsMouse ? Theme.surfaceActive : Theme.surfaceActiveOff
+                color: isActive || sidebarMouse.containsMouse ? Theme.sidebarActive : Theme.sidebarActiveOff
 
                 Behavior on color { ColorAnimation { duration: Theme.animHoverDuration } }
+                Behavior on border.color { ColorAnimation { duration: Theme.animHoverDuration } }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter

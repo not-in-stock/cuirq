@@ -143,6 +143,9 @@ bool initialize(int argc, char* argv[]) {
     g_state = new StateObject(g_stateNotifier, g_engine);
     g_engine->rootContext()->setContextProperty("state", g_state);
     g_engine->rootContext()->setContextProperty("stateNotifier", g_stateNotifier);
+    if (g_qmlWatcher) {
+        g_qmlWatcher->setStateObject(g_state);
+    }
     std::cout << "[CPP] StateObject + StateNotifier exposed to QML" << std::endl;
 
     return true;

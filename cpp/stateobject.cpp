@@ -40,3 +40,12 @@ bool StateObject::hasProp(const QString& name) const
 {
     return contains(name);
 }
+
+void StateObject::reemitAll()
+{
+    if (!m_notifier) return;
+    for (const QString& key : keys()) {
+        emit m_notifier->propChanged(key, value(key));
+    }
+    qDebug() << "[CPP] StateObject: Re-emitted" << keys().size() << "properties";
+}
