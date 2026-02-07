@@ -63,6 +63,14 @@ bool cuirq_is_auto_reload_enabled(void) {
     return cuirq::is_auto_reload_enabled();
 }
 
+void cuirq_start_directory_watch(const char* path) {
+    cuirq::start_directory_watch(path);
+}
+
+void cuirq_stop_directory_watch(void) {
+    cuirq::stop_directory_watch();
+}
+
 void cuirq_hide_titlebar(void) {
     cuirq::hide_titlebar();
 }

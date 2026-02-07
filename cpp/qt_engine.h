@@ -33,6 +33,10 @@ int get_model_count(const char* name);
 void set_auto_reload(bool enabled);
 bool is_auto_reload_enabled();
 
+// Directory watching
+void start_directory_watch(const char* path);
+void stop_directory_watch();
+
 // Platform
 void hide_titlebar();
 void enable_sidebar_vibrancy(int width);

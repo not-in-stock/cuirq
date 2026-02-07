@@ -92,6 +92,18 @@
   [sidebar-width toolbar-height]
   (PanamaBridge/enableToolbarVibrancy (int sidebar-width) (int toolbar-height)))
 
+(defn start-directory-watch!
+  "Start watching a directory for changes (macOS FSEvents).
+   Automatically stops any previous watch. On change, fires
+   a 'directoryChanged' signal with the path."
+  [path]
+  (PanamaBridge/startDirectoryWatch (str path)))
+
+(defn stop-directory-watch!
+  "Stop watching the current directory."
+  []
+  (PanamaBridge/stopDirectoryWatch))
+
 (defn set-vibrancy-appearance!
   "Set sidebar vibrancy appearance. Mode: \"light\", \"dark\", or \"system\"."
   [mode]

@@ -37,6 +37,8 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle ENABLE_SIDEBAR_VIBRANCY;
     private static final MethodHandle ENABLE_TOOLBAR_VIBRANCY;
     private static final MethodHandle SET_VIBRANCY_APPEARANCE;
+    private static final MethodHandle START_DIRECTORY_WATCH;
+    private static final MethodHandle STOP_DIRECTORY_WATCH;
 
     // Upcall state for signal callbacks
     private static Arena signalArena;
@@ -99,6 +101,10 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         SET_VIBRANCY_APPEARANCE = downcall("cuirq_set_vibrancy_appearance",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
+        START_DIRECTORY_WATCH = downcall("cuirq_start_directory_watch",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
+        STOP_DIRECTORY_WATCH = downcall("cuirq_stop_directory_watch",
+                FunctionDescriptor.ofVoid());
     }
 
     private static MethodHandle downcall(String name, FunctionDescriptor descriptor) {
@@ -305,6 +311,23 @@ public class PanamaBridge implements AutoCloseable {
             ENABLE_TOOLBAR_VIBRANCY.invokeExact(sidebarWidth, toolbarHeight);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to enable toolbar vibrancy", t);
+        }
+    }
+
+    public static void startDirectoryWatch(String path) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment pathStr = arena.allocateFrom(path);
+            START_DIRECTORY_WATCH.invokeExact(pathStr);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to start directory watch", t);
+        }
+    }
+
+    public static void stopDirectoryWatch() {
+        try {
+            STOP_DIRECTORY_WATCH.invokeExact();
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to stop directory watch", t);
         }
     }
 

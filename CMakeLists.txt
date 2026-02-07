@@ -32,7 +32,7 @@ set(CUIRQ_SOURCES
     cpp/panama_api.cpp
 )
 if(APPLE)
-    list(APPEND CUIRQ_SOURCES cpp/macos_utils.mm)
+    list(APPEND CUIRQ_SOURCES cpp/macos_utils.mm cpp/fs_watcher_macos.mm)
 endif()
 
 add_library(qmlbridge SHARED ${CUIRQ_SOURCES})
@@ -52,7 +52,7 @@ target_link_libraries(qmlbridge PRIVATE
 )
 
 if(APPLE)
-    target_link_libraries(qmlbridge PRIVATE "-framework Cocoa")
+    target_link_libraries(qmlbridge PRIVATE "-framework Cocoa" "-framework CoreServices")
 endif()
 
 # Output library to predictable location

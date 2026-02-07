@@ -28,6 +28,9 @@ int  cuirq_get_model_count(const char* name);
 void cuirq_set_auto_reload(bool enabled);
 bool cuirq_is_auto_reload_enabled(void);
 
+void cuirq_start_directory_watch(const char* path);
+void cuirq_stop_directory_watch(void);
+
 void cuirq_hide_titlebar(void);
 void cuirq_enable_sidebar_vibrancy(int width);
 void cuirq_enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight);

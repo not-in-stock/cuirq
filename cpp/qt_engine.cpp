@@ -21,6 +21,7 @@
 
 #ifdef Q_OS_MACOS
 #include "macos_utils.h"
+#include "fs_watcher.h"
 #endif
 
 // Signal forwarder for Panama FFM.
@@ -76,6 +77,9 @@ static QmlWatcher* g_qmlWatcher = nullptr;
 static StateNotifier* g_stateNotifier = nullptr;
 static StateObject* g_state = nullptr;
 static QHash<QString, JvmListModel*> g_models;
+#ifdef Q_OS_MACOS
+static DirectoryWatcher* g_directoryWatcher = nullptr;
+#endif
 static bool g_shellLoaded = false;
 static QString g_contentUrl;
 
@@ -128,6 +132,12 @@ bool initialize(int argc, char* argv[]) {
     g_qmlWatcher = new QmlWatcher(g_engine, g_engine);
     std::cout << "[CPP] QmlWatcher created (hot-reload enabled)" << std::endl;
 
+#ifdef Q_OS_MACOS
+    // Directory watcher (FSEvents-based)
+    g_directoryWatcher = new DirectoryWatcher(g_engine);
+    std::cout << "[CPP] DirectoryWatcher created (FSEvents)" << std::endl;
+#endif
+
     // Reactive state + notifier (plain QObject so QML can see its signals)
     g_stateNotifier = new StateNotifier(g_engine);
     g_state = new StateObject(g_stateNotifier, g_engine);
@@ -160,6 +170,9 @@ void shutdown() {
     g_engine = nullptr;
     g_signalForwarder = nullptr; // owned by engine
     g_qmlWatcher = nullptr;     // owned by engine
+#ifdef Q_OS_MACOS
+    g_directoryWatcher = nullptr; // owned by engine
+#endif
     g_stateNotifier = nullptr;  // owned by engine
     g_state = nullptr;          // owned by engine
 
@@ -258,6 +271,11 @@ void set_signal_callback(signal_callback_t callback) {
         return;
     }
     g_signalForwarder->setCallback(callback);
+#ifdef Q_OS_MACOS
+    if (g_directoryWatcher) {
+        g_directoryWatcher->setSignalCallback(callback);
+    }
+#endif
     std::cout << "[CPP] Panama signal callback registered" << std::endl;
 }
 
@@ -311,6 +329,29 @@ int get_model_count(const char* name) {
         return 0;
     }
     return model->count();
+}
+
+void start_directory_watch(const char* path) {
+#ifdef Q_OS_MACOS
+    if (!g_directoryWatcher) {
+        std::cerr << "[CPP] ERROR: DirectoryWatcher not initialized." << std::endl;
+        return;
+    }
+    g_directoryWatcher->startWatching(QString::fromUtf8(path));
+#else
+    Q_UNUSED(path);
+    std::cout << "[CPP] Directory watching not available on this platform" << std::endl;
+#endif
+}
+
+void stop_directory_watch() {
+#ifdef Q_OS_MACOS
+    if (g_directoryWatcher) {
+        g_directoryWatcher->stopWatching();
+    }
+#else
+    std::cout << "[CPP] Directory watching not available on this platform" << std::endl;
+#endif
 }
 
 void set_auto_reload(bool enabled) {

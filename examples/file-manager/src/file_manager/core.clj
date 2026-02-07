@@ -11,6 +11,9 @@
 ;; Navigation history
 (defonce nav-history (atom {:back [] :forward []}))
 
+;; Cache last directory listing to avoid redundant updates from FSEvents
+(defonce ^:private last-listing (atom nil))
+
 (defn- file-type
   "Classify file extension into a type category."
   [^String ext]
@@ -96,6 +99,7 @@
                                    (assoc :forward [])))))
         ;; List directory and update model
         (let [items (list-directory canonical)]
+          (reset! last-listing items)
           (models/set-data! :files items)
           ;; Update state
           (state/set-state!
@@ -103,7 +107,9 @@
             :canGoBack    (boolean (seq (:back @nav-history)))
             :canGoForward (boolean (seq (:forward @nav-history)))
             :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs canonical))}))))))
+            :breadcrumbs  (json/write-str (build-breadcrumbs canonical))})
+          ;; Watch for filesystem changes
+          (cuirq/start-directory-watch! canonical))))))
 
 (defn go-back!
   "Navigate back in history."
@@ -118,13 +124,15 @@
                                  (update :forward conj current))))
         ;; Navigate without pushing to back stack
         (let [items (list-directory prev)]
+          (reset! last-listing items)
           (models/set-data! :files items)
           (state/set-state!
            {:currentPath  prev
             :canGoBack    (boolean (seq (:back @nav-history)))
             :canGoForward (boolean (seq (:forward @nav-history)))
             :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs prev))}))))))
+            :breadcrumbs  (json/write-str (build-breadcrumbs prev))})
+          (cuirq/start-directory-watch! prev))))))
 
 (defn go-forward!
   "Navigate forward in history."
@@ -138,13 +146,15 @@
                                  (update :forward pop)
                                  (update :back conj current))))
         (let [items (list-directory next-path)]
+          (reset! last-listing items)
           (models/set-data! :files items)
           (state/set-state!
            {:currentPath  next-path
             :canGoBack    (boolean (seq (:back @nav-history)))
             :canGoForward (boolean (seq (:forward @nav-history)))
             :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs next-path))}))))))
+            :breadcrumbs  (json/write-str (build-breadcrumbs next-path))})
+          (cuirq/start-directory-watch! next-path))))))
 
 (defn- resolve-sidebar-location
   "Map sidebar location key to filesystem path."
@@ -201,6 +211,18 @@
             (let [args (json/read-str json-args)
                   path (resolve-sidebar-location (first args))]
               (navigate-to! path))))
+
+        (cuirq/on-signal! :directoryChanged
+          (fn [_ json-args]
+            (let [args (json/read-str json-args)
+                  changed-path (first args)
+                  current-path (:currentPath (state/get-state))]
+              (when (= changed-path current-path)
+                (let [items (list-directory current-path)]
+                  (when (not= items @last-listing)
+                    (reset! last-listing items)
+                    (models/set-data! :files items)
+                    (state/update-state! assoc :itemCount (count items))))))))
 
         (cuirq/on-signal! :themeChanged
           (fn [_ json-args]
