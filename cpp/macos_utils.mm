@@ -128,6 +128,18 @@ void setVibrancyAppearance(const char* mode) {
     }
 }
 
+void setVibrancyAlwaysActive(bool always) {
+    if (!g_vibrancyViews || g_vibrancyViews.count == 0) return;
+
+    NSVisualEffectState state = always
+        ? NSVisualEffectStateActive
+        : NSVisualEffectStateFollowsWindowActiveState;
+
+    for (NSVisualEffectView *v in g_vibrancyViews) {
+        v.state = state;
+    }
+}
+
 int getTitlebarHeight(void* nativeWindowHandle) {
     @autoreleasepool {
         NSView *qtView = (__bridge NSView *)nativeWindowHandle;

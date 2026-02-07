@@ -108,3 +108,8 @@
   "Set sidebar vibrancy appearance. Mode: \"light\", \"dark\", or \"system\"."
   [mode]
   (PanamaBridge/setVibrancyAppearance (name mode)))
+
+(defn set-vibrancy-always-active!
+  "Keep vibrancy active even when window loses focus. Default: false."
+  [always]
+  (PanamaBridge/setVibrancyAlwaysActive (boolean always)))

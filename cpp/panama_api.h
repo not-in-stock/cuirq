@@ -36,6 +36,7 @@ void cuirq_hide_titlebar(void);
 void cuirq_enable_sidebar_vibrancy(int width);
 void cuirq_enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight);
 void cuirq_set_vibrancy_appearance(const char* mode);
+void cuirq_set_vibrancy_always_active(bool always);
 
 #ifdef __cplusplus
 }

@@ -91,4 +91,8 @@ void cuirq_set_vibrancy_appearance(const char* mode) {
     cuirq::set_vibrancy_appearance(mode);
 }
 
+void cuirq_set_vibrancy_always_active(bool always) {
+    cuirq::set_vibrancy_always_active(always);
+}
+
 } // extern "C"

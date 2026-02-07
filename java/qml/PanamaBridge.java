@@ -38,6 +38,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle ENABLE_SIDEBAR_VIBRANCY;
     private static final MethodHandle ENABLE_TOOLBAR_VIBRANCY;
     private static final MethodHandle SET_VIBRANCY_APPEARANCE;
+    private static final MethodHandle SET_VIBRANCY_ALWAYS_ACTIVE;
     private static final MethodHandle START_DIRECTORY_WATCH;
     private static final MethodHandle STOP_DIRECTORY_WATCH;
 
@@ -104,6 +105,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_INT, ValueLayout.JAVA_INT));
         SET_VIBRANCY_APPEARANCE = downcall("cuirq_set_vibrancy_appearance",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
+        SET_VIBRANCY_ALWAYS_ACTIVE = downcall("cuirq_set_vibrancy_always_active",
+                FunctionDescriptor.ofVoid(ValueLayout.JAVA_BOOLEAN));
         START_DIRECTORY_WATCH = downcall("cuirq_start_directory_watch",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         STOP_DIRECTORY_WATCH = downcall("cuirq_stop_directory_watch",
@@ -351,6 +354,14 @@ public class PanamaBridge implements AutoCloseable {
             SET_VIBRANCY_APPEARANCE.invokeExact(modeStr);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to set vibrancy appearance", t);
+        }
+    }
+
+    public static void setVibrancyAlwaysActive(boolean always) {
+        try {
+            SET_VIBRANCY_ALWAYS_ACTIVE.invokeExact(always);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to set vibrancy always active", t);
         }
     }
 

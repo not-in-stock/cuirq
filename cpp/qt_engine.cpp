@@ -449,4 +449,12 @@ void set_vibrancy_appearance(const char* mode) {
 #endif
 }
 
+void set_vibrancy_always_active(bool always) {
+#ifdef Q_OS_MACOS
+    setVibrancyAlwaysActive(always);
+#else
+    Q_UNUSED(always);
+#endif
+}
+
 } // namespace cuirq
