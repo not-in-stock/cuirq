@@ -4,6 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    nixgl = {
+      url = "github:nix-community/nixGL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -11,20 +15,24 @@
       self,
       nixpkgs,
       flake-utils,
+      nixgl,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        # Platform detection (before pkgs, so we can conditionally apply overlays)
+        isLinux = builtins.match ".*-linux" system != null;
+        isDarwin = builtins.match ".*-darwin" system != null;
+
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
             "graalvm-oracle"
+            "nvidia-x11"
+            "nvidia"
           ];
+          overlays = if isLinux then [ nixgl.overlay ] else [];
         };
-
-        # Platform detection
-        isDarwin = pkgs.stdenv.isDarwin;
-        isLinux = pkgs.stdenv.isLinux;
 
         # Qt6 with QML modules we need
         qt6Packages = with pkgs.qt6; [
@@ -102,6 +110,17 @@
           else
             ''
               export QT_QPA_PLATFORM="wayland;xcb"
+
+              # GPU acceleration via nixGL — extract its env vars into our shell
+              if command -v nixGL &> /dev/null; then
+                while IFS='=' read -r key value; do
+                  case "$key" in
+                    LD_LIBRARY_PATH|__EGL_VENDOR_LIBRARY_FILENAMES|__EGL_VENDOR_LIBRARY_DIRS|LIBGL_DRIVERS_PATH|__GLX_VENDOR_LIBRARY_NAME)
+                      export "$key=$value"
+                      ;;
+                  esac
+                done < <(nixGL env 2>/dev/null)
+              fi
             '';
 
         # Common shell hook content
@@ -204,7 +223,8 @@
           {
             name = "jvm-qt-research";
 
-            buildInputs = qt6Packages ++ platformDeps ++ buildTools ++ devTools ++ jvmBase;
+            buildInputs = qt6Packages ++ platformDeps ++ buildTools ++ devTools ++ jvmBase
+              ++ pkgs.lib.optionals isLinux [ pkgs.nixgl.auto.nixGLDefault ];
 
             shellHook = mkShellHook graalvm25;
           }
