@@ -12,9 +12,14 @@ QtObject {
                                    : themeMode === "light" ? false
                                    : systemDark
 
+    // Platform
+    readonly property bool isMacOS: Qt.platform.os === "osx"
+
     // Backgrounds
     readonly property color background:        darkMode ? "#1E293B" : "#FFFFFF"
-    readonly property color sidebarBackground: "transparent"
+    readonly property color sidebarBackground: isMacOS ? "transparent"
+                                             : darkMode ? Qt.alpha("#1d1d20", 0.88)
+                                             : Qt.alpha("#f5f5f7", 0.88)
     readonly property color toolbarOverlay:    darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
                                                         : Qt.rgba(1, 1, 1, 0.65)
 

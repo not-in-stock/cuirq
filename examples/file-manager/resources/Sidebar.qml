@@ -22,7 +22,8 @@ Rectangle {
     })
 
     width: theme.sidebarWidth
-    color: "transparent"
+    color: theme.sidebarBackground
+    Behavior on color { ColorAnimation { duration: theme.animDuration } }
 
     // Right border
     Rectangle {
