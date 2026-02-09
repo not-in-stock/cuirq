@@ -196,39 +196,39 @@
         ;; Register signal handlers
         (println " [3/4] Registering signal handlers...")
         (cuirq/on-signal! :navigate
-          (fn [_ json-args]
-            (let [args (json/read-str json-args)]
-              (navigate-to! (first args)))))
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)]
+                              (navigate-to! (first args)))))
 
         (cuirq/on-signal! :goBack
-          (fn [_ _] (go-back!)))
+                          (fn [_ _] (go-back!)))
 
         (cuirq/on-signal! :goForward
-          (fn [_ _] (go-forward!)))
+                          (fn [_ _] (go-forward!)))
 
         (cuirq/on-signal! :sidebarNavigate
-          (fn [_ json-args]
-            (let [args (json/read-str json-args)
-                  path (resolve-sidebar-location (first args))]
-              (navigate-to! path))))
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  path (resolve-sidebar-location (first args))]
+                              (navigate-to! path))))
 
         (cuirq/on-signal! :directoryChanged
-          (fn [_ json-args]
-            (let [args (json/read-str json-args)
-                  changed-path (first args)
-                  current-path (:currentPath (state/get-state))]
-              (when (= changed-path current-path)
-                (let [items (list-directory current-path)]
-                  (when (not= items @last-listing)
-                    (reset! last-listing items)
-                    (models/update-data! :files items "path")
-                    (state/update-state! assoc :itemCount (count items))))))))
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  changed-path (first args)
+                                  current-path (:currentPath (state/get-state))]
+                              (when (= changed-path current-path)
+                                (let [items (list-directory current-path)]
+                                  (when (not= items @last-listing)
+                                    (reset! last-listing items)
+                                    (models/update-data! :files items "path")
+                                    (state/update-state! assoc :itemCount (count items))))))))
 
         (cuirq/on-signal! :themeChanged
-          (fn [_ json-args]
-            (let [args (json/read-str json-args)
-                  mode (first args)]
-              (cuirq/set-vibrancy-appearance! mode))))
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  mode (first args)]
+                              (cuirq/set-vibrancy-appearance! mode))))
 
         ;; Load QML
         (println " [4/4] Loading QML...")
