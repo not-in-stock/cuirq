@@ -32,8 +32,7 @@
           qtdeclarative # QML engine
           qtsvg # SVG support for Image elements
           qt5compat # FastBlur, GraphicalEffects
-          # qtwayland        # Uncomment if needed on Linux/Wayland
-        ];
+        ] ++ pkgs.lib.optionals isLinux [ pkgs.qt6.qtwayland ];
 
         # Platform-specific dependencies
         platformDeps =
@@ -44,7 +43,8 @@
             ]
           else
             [
-              # Linux X11/OpenGL dependencies
+              # Linux Wayland + X11/OpenGL dependencies
+              pkgs.wayland
               pkgs.xorg.libX11
               pkgs.xorg.libXcursor
               pkgs.xorg.libXrandr
@@ -78,15 +78,18 @@
         ];
 
         # Common environment variables
+        waylandPaths = if isLinux then ":${pkgs.qt6.qtwayland}" else "";
+        waylandPluginPaths = if isLinux then ":${pkgs.qt6.qtwayland}/lib/qt-6/plugins" else "";
+
         commonEnv = {
           # Help CMake find Qt
-          CMAKE_PREFIX_PATH = "${pkgs.qt6.qtbase}:${pkgs.qt6.qtdeclarative}:${pkgs.qt6.qtsvg}:${pkgs.qt6.qt5compat}";
+          CMAKE_PREFIX_PATH = "${pkgs.qt6.qtbase}:${pkgs.qt6.qtdeclarative}:${pkgs.qt6.qtsvg}:${pkgs.qt6.qt5compat}${waylandPaths}";
 
           # QML import paths
           QML2_IMPORT_PATH = "${pkgs.qt6.qtdeclarative}/lib/qt-6/qml:${pkgs.qt6.qt5compat}/lib/qt-6/qml";
 
           # Qt plugin paths (platform + image format plugins like SVG)
-          QT_PLUGIN_PATH = "${pkgs.qt6.qtbase}/lib/qt-6/plugins:${pkgs.qt6.qtsvg}/lib/qt-6/plugins";
+          QT_PLUGIN_PATH = "${pkgs.qt6.qtbase}/lib/qt-6/plugins:${pkgs.qt6.qtsvg}/lib/qt-6/plugins${waylandPluginPaths}";
           QT_QPA_PLATFORM_PLUGIN_PATH = "${pkgs.qt6.qtbase}/lib/qt-6/plugins/platforms";
         };
 
@@ -98,7 +101,7 @@
             ''
           else
             ''
-              export QT_QPA_PLATFORM=xcb
+              export QT_QPA_PLATFORM="wayland;xcb"
             '';
 
         # Common shell hook content
