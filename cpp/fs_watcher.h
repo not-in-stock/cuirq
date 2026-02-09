@@ -7,6 +7,10 @@
 
 #include "qt_engine.h"
 
+#ifndef Q_OS_MACOS
+class QFileSystemWatcher;
+#endif
+
 class DirectoryWatcher : public QObject {
     Q_OBJECT
 
@@ -22,7 +26,11 @@ public:
 
 private:
     QTimer* m_debounceTimer;
+#ifdef Q_OS_MACOS
     void* m_stream; // FSEventStreamRef (opaque)
+#else
+    QFileSystemWatcher* m_fsWatcher;
+#endif
     QString m_watchedPath;
     cuirq::signal_callback_t m_callback;
 };

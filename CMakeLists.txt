@@ -33,6 +33,8 @@ set(CUIRQ_SOURCES
 )
 if(APPLE)
     list(APPEND CUIRQ_SOURCES cpp/macos_utils.mm cpp/fs_watcher_macos.mm)
+else()
+    list(APPEND CUIRQ_SOURCES cpp/fs_watcher_linux.cpp)
 endif()
 
 add_library(qmlbridge SHARED ${CUIRQ_SOURCES})
