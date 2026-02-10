@@ -19,9 +19,10 @@ Rectangle {
     readonly property int iconSize: 24
     readonly property int indentStep: iconSize / 2
     readonly property int arrowWidth: 12
-    readonly property int arrowSpacing: 2
-    readonly property int rowLeftPadding: 8
-    readonly property int iconSpacing: 8
+    readonly property int arrowSpacing: 0
+    readonly property int rowLeftPadding: 6
+    readonly property int iconPaddingLeft: 4
+    readonly property int iconPaddingRight: 8
 
     function iconSource(type) {
         switch (type) {
@@ -102,7 +103,7 @@ Rectangle {
                 Item { width: model.isDir ? 0 : fileList.arrowWidth + fileList.arrowSpacing; height: 1 }
 
                 // Spacing before icon
-                Item { width: fileList.iconSpacing; height: 1 }
+                Item { width: fileList.iconPaddingLeft; height: 1 }
 
                 Image {
                     source: fileList.iconSource(model.fileType)
@@ -111,7 +112,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Item { width: fileList.iconSpacing; height: 1 }
+                Item { width: fileList.iconPaddingRight; height: 1 }
 
                 Text {
                     text: model.name
@@ -119,7 +120,7 @@ Rectangle {
                     color: theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - listItem.indentWidth - fileList.arrowWidth - fileList.arrowSpacing - fileList.iconSize - fileList.iconSpacing * 2
+                    width: parent.width - listItem.indentWidth - fileList.arrowWidth - fileList.arrowSpacing - fileList.iconSize - fileList.iconPaddingRight * 2
                 }
             }
 
