@@ -10,6 +10,7 @@ Rectangle {
         id: gridView
         anchors.fill: parent
         topMargin: theme.toolbarHeight
+        bottomMargin: theme.statusBarHeight
         leftMargin: theme.gridPadding
         cellWidth: theme.gridCellWidth
         cellHeight: theme.gridCellHeight
@@ -52,5 +53,6 @@ Rectangle {
         anchors.top: parent.top
         anchors.topMargin: theme.toolbarHeight
         anchors.bottom: parent.bottom
+        anchors.bottomMargin: theme.statusBarHeight
     }
 }

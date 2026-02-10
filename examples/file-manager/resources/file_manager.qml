@@ -50,13 +50,10 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            // Content area — extends behind toolbar, stops above status bar
+            // Content area — extends behind toolbar and status bar
             Rectangle {
                 id: contentArea
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: statusBar.top
+                anchors.fill: parent
                 clip: true
                 color: theme.background
                 Behavior on color { ColorAnimation { duration: theme.animDuration } }
@@ -147,7 +144,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 y: theme.toolbarHeight
-                height: listView.listHeaderHeight
+                height: theme.listHeaderHeight
                 z: 1
                 clip: true
                 visible: root.viewMode === "list"
@@ -183,7 +180,7 @@ Item {
                 anchors.left: parent.left
                 anchors.right: parent.right
                 y: theme.toolbarHeight
-                height: listView.listHeaderHeight
+                height: theme.listHeaderHeight
                 z: 2
                 visible: root.viewMode === "list"
 
@@ -280,11 +277,47 @@ Item {
                 }
             }
 
+            // Status bar blur background
+            Item {
+                id: statusBarBlur
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: statusBar.height
+                z: 1
+                clip: true
+
+                ShaderEffectSource {
+                    id: statusBarBlurSource
+                    width: contentArea.width
+                    height: contentArea.height
+                    sourceItem: contentArea
+                    visible: false
+                }
+
+                FastBlur {
+                    width: contentArea.width
+                    height: contentArea.height
+                    y: -(contentArea.height - statusBar.height)
+                    source: statusBarBlurSource
+                    radius: 64
+                    cached: false
+                    transparentBorder: false
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Qt.alpha(theme.background, 0.8)
+                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+                }
+            }
+
             StatusBar {
                 id: statusBar
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
+                z: 2
                 itemCount: root.itemCount
                 currentPath: root.currentPath
             }

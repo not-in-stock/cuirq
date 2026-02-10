@@ -58,6 +58,8 @@ QtObject {
     readonly property int listPadding:      8     // inset for list content
     readonly property int listItemHeight:   40
     readonly property int listItemSpacing:  1
+    readonly property int listHeaderHeight: 28
+    readonly property int statusBarHeight:  32
 
     // Scrollbar
     readonly property color scrollbarColor:    darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)

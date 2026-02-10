@@ -7,9 +7,8 @@ Rectangle {
     property int itemCount: 0
     property string currentPath: ""
 
-    height: 32
-    color: theme.background
-    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+    height: theme.statusBarHeight
+    color: "transparent"
 
     Rectangle {
         anchors.left: parent.left

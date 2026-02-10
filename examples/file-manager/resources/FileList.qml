@@ -14,7 +14,6 @@ Rectangle {
     readonly property int colDateWidth: 120
     readonly property int colTypeWidth: 80
     readonly property int colRightWidth: colSizeWidth + colDateWidth + colTypeWidth
-    readonly property int listHeaderHeight: 28
 
     function iconSource(type) {
         switch (type) {
@@ -32,8 +31,8 @@ Rectangle {
     ListView {
         id: listView
         anchors.fill: parent
-        topMargin: theme.toolbarHeight + fileList.listHeaderHeight + theme.listPadding
-        bottomMargin: theme.listPadding
+        topMargin: theme.toolbarHeight + theme.listHeaderHeight + theme.listPadding
+        bottomMargin: theme.statusBarHeight + theme.listPadding
         leftMargin: theme.listPadding
         rightMargin: theme.listPadding
         clip: true
@@ -150,7 +149,8 @@ Rectangle {
         flickable: listView
         anchors.right: parent.right
         anchors.top: parent.top
-        anchors.topMargin: theme.toolbarHeight
+        anchors.topMargin: theme.toolbarHeight + theme.listHeaderHeight
         anchors.bottom: parent.bottom
+        anchors.bottomMargin: theme.statusBarHeight
     }
 }
