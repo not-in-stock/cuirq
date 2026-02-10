@@ -163,7 +163,7 @@ Item {
                     y: -theme.toolbarHeight
                     source: listHeaderBlurSource
                     radius: theme.panelBlurRadius
-                    cached: false
+                    cached: true
                     transparentBorder: false
                 }
 
@@ -301,7 +301,7 @@ Item {
                     y: -(contentArea.height - statusBar.height)
                     source: statusBarBlurSource
                     radius: theme.panelBlurRadius
-                    cached: false
+                    cached: true
                     transparentBorder: false
                 }
 

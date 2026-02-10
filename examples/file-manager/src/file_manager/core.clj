@@ -5,7 +5,9 @@
             [clojure.data.json :as json]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
-  (:import [java.io File])
+  (:import [java.io File]
+           [java.text SimpleDateFormat]
+           [java.util Date])
   (:gen-class))
 
 ;; Navigation history
@@ -55,6 +57,14 @@
     (when (pos? idx)
       (subs name (inc idx)))))
 
+(def ^:private ^SimpleDateFormat date-fmt
+  (SimpleDateFormat. "dd.MM.yyyy"))
+
+(defn- format-date [^long millis]
+  (if (pos? millis)
+    (.format date-fmt (Date. millis))
+    ""))
+
 (defn- list-directory
   "List contents of a directory, returning a vec of maps."
   [^String path]
@@ -69,14 +79,17 @@
                  (let [name (.getName f)
                        is-dir (.isDirectory f)
                        ext (when-not is-dir (extension name))]
-                   {:name      name
-                    :path      (.getAbsolutePath f)
-                    :isDir     is-dir
-                    :size      (if is-dir "" (format-size (.length f)))
-                    :sizeBytes (if is-dir 0 (.length f))
-                    :modified  (.lastModified f)
-                    :extension (or ext "")
-                    :fileType  (if is-dir "folder" (file-type ext))}))))))
+                   (let [modified (.lastModified f)]
+                     {:name              name
+                      :path              (.getAbsolutePath f)
+                      :isDir             is-dir
+                      :size              (if is-dir "" (format-size (.length f)))
+                      :sizeBytes         (if is-dir 0 (.length f))
+                      :modified          modified
+                      :modifiedFormatted (format-date modified)
+                      :extension         (or ext "")
+                      :fileType          (if is-dir "folder" (file-type ext))
+                      :typeLabel         (if is-dir "Folder" (if ext (.toUpperCase ^String ext) ""))})))))))
 
 (defn- build-breadcrumbs
   "Build breadcrumb trail from a path."

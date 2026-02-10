@@ -17,7 +17,7 @@ ScrollBar {
 
     property bool _show: false
     property bool _engaged: active || flickable.movingVertically
-    property bool _windowActive: Window.window?.active ?? true
+    property bool _windowActive: Window.window ? Window.window.active : true
 
     Binding on position {
         value: root.flickable.contentHeight > 0

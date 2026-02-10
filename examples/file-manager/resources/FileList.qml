@@ -36,6 +36,7 @@ Rectangle {
         leftMargin: theme.listPadding
         rightMargin: theme.listPadding
         clip: true
+        cacheBuffer: 200
         spacing: theme.listItemSpacing
 
         model: files
@@ -91,11 +92,7 @@ Rectangle {
                 x: parent.width - fileList.colDateWidth - fileList.colTypeWidth
                 width: fileList.colDateWidth
                 leftPadding: 12
-                text: {
-                    if (model.modified <= 0) return ""
-                    let d = new Date(model.modified)
-                    return d.toLocaleDateString(Qt.locale(), Locale.ShortFormat)
-                }
+                text: model.modifiedFormatted
                 font.pixelSize: 12
                 color: theme.textTertiary
             }
@@ -106,7 +103,7 @@ Rectangle {
                 x: parent.width - fileList.colTypeWidth
                 width: fileList.colTypeWidth
                 leftPadding: 12
-                text: model.isDir ? "Folder" : (model.extension ? model.extension.toUpperCase() : "")
+                text: model.typeLabel
                 font.pixelSize: 12
                 color: theme.textTertiary
                 elide: Text.ElideRight
