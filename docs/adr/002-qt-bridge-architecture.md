@@ -1,7 +1,7 @@
 # ADR-002: Qt Bridge Architecture
 
 ## Status
-Proposed
+Accepted (amended — JNI fallback removed, Panama FFM is the sole bridge mechanism)
 
 ## Context
 
@@ -10,14 +10,14 @@ cuirq needs a bridge between Clojure (JVM) and Qt/QML (C++). Unlike reagent whic
 ### Current Architecture
 
 ```
-Clojure ←→ [JSON] ←→ Java Bridge ←→ [JNI] ←→ C++ Bridge ←→ Qt/QML Engine
+Clojure ←→ [JSON] ←→ Java Bridge ←→ [Panama FFM] ←→ C++ Bridge ←→ Qt/QML Engine
 ```
 
-Current implementation uses message passing:
+Current implementation uses Panama FFM (JEP 454) for native interop:
 - All data serialized to JSON
-- Single communication channel
-- No direct Qt API access from Clojure
-- Simple but limited
+- Panama downcalls (Java → C++) and upcall stubs (C++ → Java)
+- No JNI — pure Foreign Function & Memory API
+- Simple, safe, no boilerplate
 
 ### Comparison with Other Approaches
 
@@ -38,25 +38,23 @@ Current implementation uses message passing:
 
 ## Decision
 
-Implement a **layered bridge architecture** with protocol abstraction, prioritizing **Panama FFM API** over JNI.
+Implement a **layered bridge architecture** with protocol abstraction, using **Panama FFM API** as the sole native interop mechanism.
 
-### Technology Choice: Panama over JNI
+### Technology Choice: Panama FFM
 
-**Decision**: Use Java Foreign Function & Memory API (Panama, JEP 454) as the primary native interop mechanism.
+**Decision**: Use Java Foreign Function & Memory API (Panama, JEP 454) as the native interop mechanism. No JNI fallback.
 
 **Rationale**:
-- Framework has no existing users → no migration burden
 - Panama is cleaner, safer, and more maintainable than JNI
 - Zero-copy memory access built-in
 - GraalVM 25 supports Panama FFM out of the box
-- Less C++ boilerplate to maintain
+- Less C++ boilerplate — plain `extern "C"` functions, no JNI headers
+- No JNI fallback needed — cuirq targets Java 25+ exclusively
+- Framework has no existing users on older JVMs
 
-**Layers** (in priority order):
-1. **cuirq.qt.panama** - Primary implementation using FFM API
-2. **cuirq.qt.jni** - Legacy fallback for older JVMs
-3. **cuirq.qt.codegen** - Compile-time code generation (future)
-
-All layers implement the same protocol, allowing transparent switching.
+**Layers**:
+1. **cuirq.qt.panama** - Core implementation using FFM API (implemented)
+2. **cuirq.qt.codegen** - Compile-time code generation (future)
 
 ### Architecture
 
@@ -73,16 +71,16 @@ All layers implement the same protocol, allowing transparent switching.
 │  - set-model-data! / update-model!                              │
 └───────────────────────────┬─────────────────────────────────────┘
                             │
-        ┌───────────────────┼───────────────────┐
-        │                   │                   │
-        ▼                   ▼                   ▼
-┌───────────────┐   ┌───────────────┐   ┌───────────────┐
-│ MessageBridge │   │ DirectBridge  │   │ CodegenBridge │
-│   (default)   │   │   (future)    │   │   (future)    │
-│               │   │               │   │               │
-│ JSON + queue  │   │ JNI calls     │   │ Generated     │
-│ Simple debug  │   │ Zero-copy     │   │ Type-safe     │
-└───────────────┘   └───────────────┘   └───────────────┘
+        ┌───────────────────┴───────────────────┐
+        │                                       │
+        ▼                                       ▼
+┌───────────────┐                       ┌───────────────┐
+│ PanamaBridge  │                       │ CodegenBridge │
+│  (default)    │                       │   (future)    │
+│               │                       │               │
+│ FFM + JSON    │                       │ Generated     │
+│ Simple debug  │                       │ Type-safe     │
+└───────────────┘                       └───────────────┘
 ```
 
 ## Implementation
@@ -149,355 +147,98 @@ All layers implement the same protocol, allowing transparent switching.
     "Execute multiple operations in single round-trip."))
 ```
 
-### 2. Message Bridge (Default Implementation)
+### 2. Panama Bridge (Default Implementation)
 
-Current approach, wrapped in protocol:
+Current approach using Panama FFM, wrapped in protocol:
 
 ```clojure
-(ns cuirq.qt.message-bridge
+(ns cuirq.qt.panama-bridge
   (:require [cuirq.qt.protocol :as proto]
             [clojure.data.json :as json])
-  (:import [qml Bridge]))
+  (:import [qml PanamaBridge]))
 
-(defrecord MessageBridge [^Bridge bridge
-                          signal-handlers
-                          property-watches]
+(defrecord PanamaBridgeImpl [signal-handlers
+                              property-watches]
 
   proto/QtBridge
 
   (initialize! [this config]
-    (.initialize bridge)
-    (doto this
-      (setup-signal-dispatch!)
-      (setup-property-sync!)))
+    (PanamaBridge/initialize (into-array String (:args config)))
+    this)
 
   (shutdown! [this]
-    (.shutdown bridge)
+    (PanamaBridge/shutdown)
     (reset! signal-handlers {})
     (reset! property-watches {}))
 
   (set-property! [_ name value]
-    (.setContextProperty bridge
-                         (clj-name->qml name)
-                         (json/write-str value)))
-
-  (get-property [_ name]
-    (-> (.getContextProperty bridge (clj-name->qml name))
-        json/read-str
-        keywordize-keys))
-
-  (watch-property! [this name callback]
-    (swap! property-watches assoc name callback)
-    #(swap! property-watches dissoc name))
+    (PanamaBridge/setContextProperty
+      (clj-name->qml name)
+      (json/write-str value)))
 
   (on-signal! [this signal-name handler]
-    (swap! signal-handlers assoc signal-name handler)
+    (PanamaBridge/registerSignalHandler
+      (name signal-name)
+      (reify PanamaBridge$SignalHandler
+        (handle [_ n args]
+          (handler (keyword n) (json/read-str args :key-fn keyword)))))
     #(swap! signal-handlers dissoc signal-name))
 
-  (off-signal! [this signal-name]
-    (swap! signal-handlers dissoc signal-name))
-
-  (emit! [_ signal-name args]
-    (.emitSignal bridge
-                 (clj-name->qml signal-name)
-                 (json/write-str args)))
-
   (create-model! [_ model-name roles]
-    (.createListModel bridge
-                      (name model-name)
-                      (into-array String (map name roles))))
+    (PanamaBridge/createModel (name model-name)))
 
   (set-model-data! [_ model-name data]
-    (.setModelData bridge
-                   (name model-name)
-                   (json/write-str data)))
-
-  (append-model! [_ model-name items]
-    (.appendModelData bridge
-                      (name model-name)
-                      (json/write-str items)))
-
-  (update-model! [_ model-name index item]
-    (.updateModelItem bridge
-                      (name model-name)
-                      index
-                      (json/write-str item)))
-
-  (remove-model! [_ model-name index count]
-    (.removeModelItems bridge (name model-name) index count))
+    (PanamaBridge/setModelData
+      (name model-name)
+      (json/write-str data)))
 
   (clear-model! [_ model-name]
-    (.clearModel bridge (name model-name)))
+    (PanamaBridge/clearModel (name model-name)))
 
   (load-qml! [_ path]
-    (.loadQml bridge path))
+    (PanamaBridge/loadQml path))
 
   (reload-qml! [this]
-    (.reloadQml bridge)))
+    ;; Reload handled by QmlWatcher C++ side
+    ))
 
 ;; Helper functions
 (defn- clj-name->qml [kw-or-str]
   (-> (name kw-or-str)
-      (clojure.string/replace #"-" "_")
-      csk/->camelCase))
-
-(defn- setup-signal-dispatch! [{:keys [bridge signal-handlers]}]
-  (.setSignalCallback bridge
-    (reify qml.SignalCallback
-      (onSignal [_ name args]
-        (when-let [handler (get @signal-handlers (keyword name))]
-          (handler (json/read-str args :key-fn keyword)))))))
+      (clojure.string/replace #"-" "_")))
 
 ;; Constructor
 (defn create-bridge []
-  (map->MessageBridge
-    {:bridge (Bridge.)
-     :signal-handlers (atom {})
+  (map->PanamaBridgeImpl
+    {:signal-handlers (atom {})
      :property-watches (atom {})}))
 ```
 
-### 3. Panama Bridge (Primary - GraalVM 25+)
+### 3. Panama FFM Implementation (Actual)
 
-Primary implementation using Foreign Function & Memory API:
+The actual `PanamaBridge.java` uses static methods with `MethodHandle` downcalls to `extern "C"` functions in `libqmlbridge`. See `java/qml/PanamaBridge.java` for the full implementation.
 
-```java
-// java/qml/PanamaBridge.java
-package qml;
-
-import java.lang.foreign.*;
-import java.lang.invoke.MethodHandle;
-
-public class PanamaBridge implements AutoCloseable {
-    private static final Linker LINKER = Linker.nativeLinker();
-    private static final Arena ARENA = Arena.ofShared();
-
-    // Load native library
-    private static final SymbolLookup LOOKUP;
-    static {
-        System.loadLibrary("cuirq_qt");
-        LOOKUP = SymbolLookup.loaderLookup();
-    }
-
-    // Function descriptors for C functions
-    private static final FunctionDescriptor SET_PROPERTY_DESC =
-        FunctionDescriptor.ofVoid(ADDRESS, ADDRESS, ADDRESS);  // (engine*, name, value)
-
-    private static final FunctionDescriptor EMIT_SIGNAL_DESC =
-        FunctionDescriptor.ofVoid(ADDRESS, ADDRESS, ADDRESS);  // (engine*, signal, args)
-
-    private static final FunctionDescriptor CREATE_MODEL_DESC =
-        FunctionDescriptor.of(ADDRESS, ADDRESS, ADDRESS, ADDRESS);  // engine*, name, roles -> model*
-
-    // Method handles (downcalls to C++)
-    private final MethodHandle setProperty;
-    private final MethodHandle emitSignal;
-    private final MethodHandle createModel;
-    private final MethodHandle setModelData;
-
-    // Engine pointer
-    private final MemorySegment engine;
-
-    public PanamaBridge() {
-        // Initialize downcall handles
-        this.setProperty = LINKER.downcallHandle(
-            LOOKUP.find("qt_set_property").orElseThrow(),
-            SET_PROPERTY_DESC
-        );
-        this.emitSignal = LINKER.downcallHandle(
-            LOOKUP.find("qt_emit_signal").orElseThrow(),
-            EMIT_SIGNAL_DESC
-        );
-        this.createModel = LINKER.downcallHandle(
-            LOOKUP.find("qt_create_model").orElseThrow(),
-            CREATE_MODEL_DESC
-        );
-        this.setModelData = LINKER.downcallHandle(
-            LOOKUP.find("qt_set_model_data").orElseThrow(),
-            FunctionDescriptor.ofVoid(ADDRESS, ADDRESS, JAVA_INT)
-        );
-
-        // Create Qt engine
-        MethodHandle createEngine = LINKER.downcallHandle(
-            LOOKUP.find("qt_create_engine").orElseThrow(),
-            FunctionDescriptor.of(ADDRESS)
-        );
-        try {
-            this.engine = (MemorySegment) createEngine.invokeExact();
-        } catch (Throwable t) {
-            throw new RuntimeException("Failed to create Qt engine", t);
-        }
-    }
-
-    public void setProperty(String name, String jsonValue) {
-        try (Arena local = Arena.ofConfined()) {
-            MemorySegment nameStr = local.allocateFrom(name);
-            MemorySegment valueStr = local.allocateFrom(jsonValue);
-            setProperty.invokeExact(engine, nameStr, valueStr);
-        } catch (Throwable t) {
-            throw new RuntimeException("setProperty failed", t);
-        }
-    }
-
-    public void emitSignal(String signal, String jsonArgs) {
-        try (Arena local = Arena.ofConfined()) {
-            MemorySegment signalStr = local.allocateFrom(signal);
-            MemorySegment argsStr = local.allocateFrom(jsonArgs);
-            emitSignal.invokeExact(engine, signalStr, argsStr);
-        } catch (Throwable t) {
-            throw new RuntimeException("emitSignal failed", t);
-        }
-    }
-
-    // Zero-copy model data using shared buffer
-    public void setModelDataDirect(String modelName, MemorySegment buffer, int itemCount) {
-        try (Arena local = Arena.ofConfined()) {
-            MemorySegment nameStr = local.allocateFrom(modelName);
-            // Pass buffer pointer directly - no copy!
-            setModelData.invokeExact(engine, nameStr, buffer, itemCount);
-        } catch (Throwable t) {
-            throw new RuntimeException("setModelData failed", t);
-        }
-    }
-
-    @Override
-    public void close() {
-        // Cleanup engine
-        try {
-            MethodHandle destroyEngine = LINKER.downcallHandle(
-                LOOKUP.find("qt_destroy_engine").orElseThrow(),
-                FunctionDescriptor.ofVoid(ADDRESS)
-            );
-            destroyEngine.invokeExact(engine);
-        } catch (Throwable t) {
-            // Log but don't throw
-        }
-    }
-}
-```
+Key patterns:
+- **Downcalls**: `MethodHandle` per C function, looked up once in `static {}` block
+- **Upcalls**: Signal callback via `Linker.upcallStub()` — C function pointer that calls `PanamaBridge.onSignal()`
+- **Memory**: `Arena.ofConfined()` for short-lived string allocations (args to C functions)
+- **Routing**: `ConcurrentHashMap<String, SignalHandler>` routes signal names to handlers
 
 ```cpp
-// cpp/panama_bridge.cpp
-// Simple C API - no JNI boilerplate!
-
+// C++ side: plain extern "C" functions in panama_api.h
 extern "C" {
-
-void* qt_create_engine() {
-    // Initialize Qt application if needed
-    static int argc = 1;
-    static char* argv[] = {(char*)"cuirq"};
-    static QGuiApplication app(argc, argv);
-
-    QQmlApplicationEngine* engine = new QQmlApplicationEngine();
-    return engine;
+    bool cuirq_initialize(int argc, char* argv[]);
+    void cuirq_shutdown();
+    int  cuirq_exec();
+    void cuirq_set_property(const char* name, const char* json_value);
+    void cuirq_set_signal_callback(void (*callback)(const char*, const char*));
+    void cuirq_create_model(const char* name);
+    void cuirq_set_model_data(const char* name, const char* json_data);
+    // ... etc
 }
-
-void qt_destroy_engine(void* engine) {
-    delete static_cast<QQmlApplicationEngine*>(engine);
-}
-
-void qt_set_property(void* engine, const char* name, const char* jsonValue) {
-    auto* e = static_cast<QQmlApplicationEngine*>(engine);
-    QJsonDocument doc = QJsonDocument::fromJson(jsonValue);
-    e->rootContext()->setContextProperty(name, doc.toVariant());
-}
-
-void qt_emit_signal(void* engine, const char* signal, const char* jsonArgs) {
-    // Signal dispatch implementation
-}
-
-void qt_set_model_data(void* engine, const char* modelName,
-                       void* buffer, int itemCount) {
-    // Direct buffer access - zero copy!
-    auto* data = static_cast<ItemData*>(buffer);
-    // Update model directly from buffer
-}
-
-}  // extern "C"
 ```
 
-```clojure
-;; clj/src/cuirq/qt/panama.clj
-(ns cuirq.qt.panama
-  (:require [cuirq.qt.protocol :as proto]
-            [clojure.data.json :as json])
-  (:import [qml PanamaBridge]
-           [java.lang.foreign Arena MemorySegment]))
-
-(defrecord PanamaBridgeImpl [^PanamaBridge bridge
-                             ^Arena shared-arena
-                             signal-handlers]
-
-  proto/QtBridge
-
-  (set-property! [_ name value]
-    (.setProperty bridge
-                  (clj-name->qml name)
-                  (json/write-str value)))
-
-  (emit! [_ signal-name args]
-    (.emitSignal bridge
-                 (clj-name->qml signal-name)
-                 (json/write-str args)))
-
-  ;; Zero-copy for large data
-  (set-model-data! [this model-name data]
-    (if (> (count data) 100)
-      ;; Large dataset: use direct buffer
-      (let [buffer (write-items-to-buffer! shared-arena data)]
-        (.setModelDataDirect bridge (name model-name) buffer (count data)))
-      ;; Small dataset: JSON is fine
-      (.setModelData bridge (name model-name) (json/write-str data))))
-
-  ;; ... rest of protocol
-
-  java.lang.AutoCloseable
-  (close [_]
-    (.close bridge)
-    (.close shared-arena)))
-
-(defn create-bridge []
-  (map->PanamaBridgeImpl
-    {:bridge (PanamaBridge.)
-     :shared-arena (Arena/ofShared)
-     :signal-handlers (atom {})}))
-```
-
-### 4. JNI Bridge (Legacy Fallback)
-
-For JVMs < 25 or when Panama is unavailable:
-
-```clojure
-(ns cuirq.qt.jni
-  (:require [cuirq.qt.protocol :as proto]
-            [clojure.data.json :as json])
-  (:import [qml JniBridge]))
-
-;; Traditional JNI implementation
-;; Requires separate .cpp file with JNI_OnLoad, etc.
-(defrecord JniBridgeImpl [^JniBridge bridge signal-handlers]
-
-  proto/QtBridge
-
-  (set-property! [_ name value]
-    (.setContextProperty bridge
-                         (clj-name->qml name)
-                         (json/write-str value)))
-
-  (emit! [_ signal-name args]
-    (.emitSignal bridge
-                 (clj-name->qml signal-name)
-                 (json/write-str args)))
-
-  ;; ... standard JNI implementation
-  )
-
-(defn create-bridge []
-  (map->JniBridgeImpl
-    {:bridge (JniBridge.)
-     :signal-handlers (atom {})}))
-```
-
-### 5. Codegen Bridge (Future - Type Safety)
+### 4. Codegen Bridge (Future - Type Safety)
 
 Compile-time generation for type-safe bindings:
 
@@ -538,35 +279,34 @@ Compile-time generation for type-safe bindings:
     ;; Return Clojure implementation
     bridge-impl))
 
-;; Generated Java (example output)
+;; Generated Java (example output — Panama FFM downcalls)
 (comment
   ;; Counter.java
   "package qml.generated;
 
-   public class Counter {
-       private long nativeHandle;
+   import java.lang.foreign.*;
+   import java.lang.invoke.MethodHandle;
 
-       public native void initialize();
-       public native void destroy();
+   public class Counter implements AutoCloseable {
+       private static final MethodHandle GET_COUNT;
+       private static final MethodHandle SET_COUNT;
+       // ... other downcall handles
 
-       // Properties
-       public native int getCount();
-       public native void setCount(int value);
-       public native String getLabel();
-       public native void setLabel(String value);
-
-       // Methods
-       public native void increment();
-       public native void setValue(int value);
-
-       // Signal emission
-       public native void emitIncremented(int newValue);
-       public native void emitReset();
-
-       // Signal handlers (called from C++)
-       public void onIncremented(int newValue) {
-           // Dispatch to Clojure
+       static {
+           SymbolLookup lookup = SymbolLookup.loaderLookup();
+           Linker linker = Linker.nativeLinker();
+           GET_COUNT = linker.downcallHandle(
+               lookup.find(\"counter_get_count\").orElseThrow(),
+               FunctionDescriptor.of(ValueLayout.JAVA_INT));
+           // ... etc
        }
+
+       public int getCount() { ... }
+       public void setCount(int value) { ... }
+       public void increment() { ... }
+
+       @Override
+       public void close() { ... }
    }")
 
 ;; Generated C++ (example output)
@@ -574,7 +314,6 @@ Compile-time generation for type-safe bindings:
   ;; counter.h
   "#pragma once
    #include <QObject>
-   #include <jni.h>
 
    class Counter : public QObject {
        Q_OBJECT
@@ -582,7 +321,7 @@ Compile-time generation for type-safe bindings:
        Q_PROPERTY(QString label READ label WRITE setLabel NOTIFY labelChanged)
 
    public:
-       explicit Counter(JNIEnv* env, jobject javaObj);
+       explicit Counter(QObject* parent = nullptr);
        ~Counter();
 
        int count() const { return m_count; }
@@ -603,8 +342,6 @@ Compile-time generation for type-safe bindings:
    private:
        int m_count = 0;
        QString m_label;
-       JNIEnv* m_env;
-       jobject m_javaObj;
    };"))
 
 ;; Usage in application
@@ -634,6 +371,9 @@ Compile-time generation for type-safe bindings:
 ```
 
 ### 5. High-Level API (cuirq.qt)
+
+> Note: The codegen examples above use JNI in generated C++ code for illustration.
+> Actual implementation would use Panama FFM upcalls/downcalls instead.
 
 User-facing API that abstracts bridge implementation:
 
@@ -704,42 +444,32 @@ User-facing API that abstracts bridge implementation:
 
 ## Migration Path
 
-### Phase 1: GraalVM 25 + Panama Foundation
+### Phase 1: Panama Foundation (done)
 
-**Environment Setup:**
-- [ ] Update `flake.nix` to use `graalvm-oracle_25` as default JVM
-- [ ] Remove Temurin 21, keep only GraalVM 25
-- [ ] Add `--enable-native-access=ALL-UNNAMED` to JVM args
-- [ ] Update `bb.edn` tasks for new JVM flags
+- [x] GraalVM 25 as default JVM in `flake.nix`
+- [x] `--enable-native-access=ALL-UNNAMED` in JVM args
+- [x] `java/qml/PanamaBridge.java` with FFM downcalls and upcall stubs
+- [x] C++ exports plain `extern "C"` functions (no JNI boilerplate)
+- [x] Clojure API wraps PanamaBridge static methods
+- [x] Counter and file-manager examples working
 
-**Panama Bridge Implementation:**
-- [ ] Create `java/qml/PanamaBridge.java` with FFM API
-- [ ] Define C function signatures using `FunctionDescriptor`
-- [ ] Implement `MethodHandle` downcalls for Qt functions
-- [ ] Create `MemoryLayout` structs for data transfer
+### Phase 2: Thread Safety & Zero-Copy
 
-**C++ Side:**
-- [ ] Simplify C++ to export plain C functions (no JNI boilerplate)
-- [ ] Remove `JNIEnv*` and `jobject` from signatures
-- [ ] Keep Qt/QML integration as-is
+**Qt Thread Dispatch (see ADR-003):**
+- [ ] `cuirq_invoke_on_qt_thread` C function
+- [ ] `QtThread.invoke()` Java dispatcher
+- [ ] `cuirq.qt/invoke!` Clojure wrapper
+- [ ] Wrap all Qt-touching calls through dispatcher
 
-**Clojure Integration:**
-- [ ] Create `cuirq.qt.panama` namespace
-- [ ] Implement `QtBridge` protocol using Panama
-- [ ] Test with counter example
-
-### Phase 2: Zero-Copy Data Transfer
-
-**DirectByteBuffer Integration:**
-- [ ] Implement shared memory region for model data
-- [ ] Define binary layouts for common structures (file items, list items)
-- [ ] Create `cuirq.qt.buffer` namespace for binary serialization
+**Zero-Copy Data Transfer:**
+- [ ] Shared memory region for large model data
+- [ ] Binary layouts for common structures
+- [ ] `cuirq.qt.buffer` namespace for binary serialization
 
 **Virtual List Model:**
-- [ ] Implement `VirtualListModel` in C++ for large datasets
-- [ ] Create lazy data source protocol in Clojure
-- [ ] Support range requests (visible items only)
-- [ ] Test with file manager example (100k+ items)
+- [ ] `VirtualListModel` in C++ for large datasets
+- [ ] Lazy data source protocol in Clojure
+- [ ] Range requests (visible items only)
 
 ### Phase 3: Type Safety & Codegen
 
@@ -748,23 +478,6 @@ User-facing API that abstracts bridge implementation:
 - [ ] Generate Java FFM code from specs
 - [ ] Generate C++ headers from specs
 - [ ] Integrate with `bb build` task
-
-### Legacy Support
-
-**JNI Fallback (for older JVMs):**
-- Keep `cuirq.qt.jni` namespace
-- Auto-detect JVM version at runtime
-- Fall back to JNI if Panama unavailable
-
-```clojure
-;; Runtime bridge selection
-(defn create-bridge []
-  (if (panama-available?)
-    (panama/create-bridge)
-    (do
-      (log/warn "Panama FFM not available, falling back to JNI")
-      (jni/create-bridge))))
-```
 
 ## Consequences
 
@@ -778,18 +491,16 @@ User-facing API that abstracts bridge implementation:
 ### Negative
 
 1. **Indirection** - Protocol adds slight overhead
-2. **Complexity** - Multiple implementations to maintain
-3. **Codegen complexity** - C++/Java generation is non-trivial
+2. **Codegen complexity** - C++/Java generation is non-trivial (future phase)
 
 ### Mitigation
 
-1. Protocol dispatch is negligible vs. JNI overhead
-2. Start with one implementation, add others when needed
-3. Codegen is optional, most apps won't need it
+1. Protocol dispatch is negligible vs. Panama FFM overhead
+2. Codegen is optional, most apps won't need it
 
 ## References
 
+- [JEP 454: Foreign Function & Memory API](https://openjdk.org/jeps/454)
 - [QtJambi Architecture](https://github.com/OmixVisualization/qtjambi)
 - [React Native Bridge](https://reactnative.dev/docs/native-modules-intro)
-- [JNI Best Practices](https://developer.android.com/training/articles/perf-jni)
 - [Qt Property System](https://doc.qt.io/qt-6/properties.html)

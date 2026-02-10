@@ -30,11 +30,11 @@ This roadmap outlines planned optimizations and features for production-ready de
 
 **Problem:** Currently all properties sync on every state change, even if only one property changed.
 
-**Solution:** Track last synced state and only update changed properties via JNI.
+**Solution:** Track last synced state and only update changed properties via Panama FFM.
 
 **Benefits:**
 - 10-50x faster state updates
-- Reduces JNI overhead dramatically
+- Reduces Panama FFM call overhead dramatically
 - No API changes required
 
 **Effort:** ~2 hours
