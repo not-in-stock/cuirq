@@ -48,48 +48,9 @@ Rectangle {
         }
     }
 
-    // Column header
-    Item {
-        id: header
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        height: theme.millerItemHeight
-
-        Text {
-            anchors.centerIn: parent
-            text: root.columnName
-            font.pixelSize: 11
-            font.weight: Font.DemiBold
-            color: theme.textSecondary
-            elide: Text.ElideMiddle
-            width: parent.width - 16
-            horizontalAlignment: Text.AlignHCenter
-            Behavior on color {
-                ColorAnimation {
-                    duration: theme.animDuration
-                }
-            }
-        }
-
-        // Bottom separator
-        Rectangle {
-            anchors.bottom: parent.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 1
-            color: theme.separator
-            Behavior on color {
-                ColorAnimation {
-                    duration: theme.animDuration
-                }
-            }
-        }
-    }
-
     ListView {
         id: listView
-        anchors.top: header.bottom
+        anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom

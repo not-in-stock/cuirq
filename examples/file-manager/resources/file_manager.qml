@@ -195,8 +195,7 @@ Item {
                             gridFadeIn.restart();
                         else if (root.viewMode === "list")
                             listFadeIn.restart();
-                        else if (root.viewMode === "columns")
-                            columnsFadeIn.restart();
+                        // columns: no fade-in on path change — columns manage their own content
                     }
                 }
 
