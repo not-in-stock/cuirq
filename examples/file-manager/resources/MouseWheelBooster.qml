@@ -9,10 +9,8 @@ WheelHandler {
     orientation: Qt.Vertical
 
     onRotationChanged: {
-        let dy = rotation * speedMultiplier
-        let minY = flickable.originY - flickable.topMargin
-        let maxY = flickable.originY + flickable.contentHeight - flickable.height + flickable.bottomMargin
-        flickable.contentY = Math.max(minY, Math.min(maxY, flickable.contentY - dy))
+        let velocity = rotation * speedMultiplier * 12
+        flickable.flick(0, velocity)
         rotation = 0
     }
 }
