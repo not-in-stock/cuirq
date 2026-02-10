@@ -42,6 +42,7 @@ Rectangle {
         displayMarginEnd: theme.statusBarHeight
         spacing: theme.listItemSpacing
         ScrollBar.vertical: OverlayScrollBar {}
+        MouseWheelBooster { flickable: listView }
 
         model: files
 

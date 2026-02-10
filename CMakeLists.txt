@@ -21,7 +21,7 @@ add_compile_options(
 set(CMAKE_AUTOMOC ON)
 
 # Find Qt6 components
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick Svg)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Svg)
 
 # Build shared library (.dylib on macOS, .so on Linux)
 set(CUIRQ_SOURCES
@@ -50,6 +50,7 @@ target_link_libraries(qmlbridge PRIVATE
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    Qt6::QuickControls2
     Qt6::Svg
 )
 

@@ -7,6 +7,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QString>
+#include <QQuickStyle>
 #include <QUrl>
 #include <QHash>
 #include <QObject>
@@ -114,6 +115,7 @@ bool initialize(int argc, char* argv[]) {
     }
     g_argc = argc;
 
+    QQuickStyle::setStyle("Basic");
     QQuickWindow::setDefaultAlphaBuffer(true);
     g_app = new QGuiApplication(g_argc, g_argv_storage.data());
     std::cout << "[CPP] QGuiApplication created" << std::endl;

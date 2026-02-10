@@ -21,6 +21,7 @@ Rectangle {
         displayMarginEnd: theme.statusBarHeight
         clip: false
         ScrollBar.vertical: OverlayScrollBar {}
+        MouseWheelBooster { flickable: gridView }
 
         model: files
 
