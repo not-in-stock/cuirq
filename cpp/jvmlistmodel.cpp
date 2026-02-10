@@ -175,10 +175,12 @@ void JvmListModel::sortByRole(const QString& roleName, bool ascending)
 
     std::stable_sort(m_items.begin(), m_items.end(),
         [&](const QVariantMap& a, const QVariantMap& b) {
-            // Directories always first
-            bool aDirVal = a.value("isDir").toBool();
-            bool bDirVal = b.value("isDir").toBool();
-            if (aDirVal != bDirVal) return aDirVal > bDirVal;
+            // Directories first only for non-numeric sorts (name, type)
+            if (!numeric) {
+                bool aDirVal = a.value("isDir").toBool();
+                bool bDirVal = b.value("isDir").toBool();
+                if (aDirVal != bDirVal) return aDirVal > bDirVal;
+            }
 
             // Compare by requested role
             QVariant va = a.value(roleName);
