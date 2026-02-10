@@ -11,12 +11,16 @@ Rectangle {
 
     GridView {
         id: gridView
-        anchors.fill: parent
-        topMargin: theme.toolbarHeight + 10
-        bottomMargin: theme.statusBarHeight
+        y: theme.toolbarHeight
+        width: parent.width
+        height: parent.height - theme.toolbarHeight - theme.statusBarHeight
+        topMargin: 10
         cellWidth: fileGrid._availableWidth / fileGrid._columns
         cellHeight: theme.gridCellHeight
-        clip: true
+        displayMarginBeginning: theme.toolbarHeight
+        displayMarginEnd: theme.statusBarHeight
+        clip: false
+        ScrollBar.vertical: OverlayScrollBar {}
 
         model: files
 
@@ -55,12 +59,4 @@ Rectangle {
         }
     }
 
-    OverlayScrollBar {
-        flickable: gridView
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.topMargin: theme.toolbarHeight
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: theme.statusBarHeight
-    }
 }

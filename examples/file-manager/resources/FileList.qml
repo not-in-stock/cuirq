@@ -30,14 +30,18 @@ Rectangle {
 
     ListView {
         id: listView
-        anchors.fill: parent
-        topMargin: theme.toolbarHeight + theme.listHeaderHeight + theme.listPadding
-        bottomMargin: theme.statusBarHeight + theme.listPadding
+        y: theme.toolbarHeight + theme.listHeaderHeight
+        width: parent.width
+        height: parent.height - theme.toolbarHeight - theme.listHeaderHeight - theme.statusBarHeight
+        topMargin: theme.listPadding
+        bottomMargin: theme.listPadding
         leftMargin: theme.listPadding
         rightMargin: theme.listPadding
-        clip: true
-        cacheBuffer: 200
+        clip: false
+        displayMarginBeginning: theme.toolbarHeight + theme.listHeaderHeight
+        displayMarginEnd: theme.statusBarHeight
         spacing: theme.listItemSpacing
+        ScrollBar.vertical: OverlayScrollBar {}
 
         model: files
 
@@ -140,14 +144,5 @@ Rectangle {
             color: theme.textSecondary
             visible: listView.count === 0
         }
-    }
-
-    OverlayScrollBar {
-        flickable: listView
-        anchors.right: parent.right
-        anchors.top: parent.top
-        anchors.topMargin: theme.toolbarHeight + theme.listHeaderHeight
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: theme.statusBarHeight
     }
 }
