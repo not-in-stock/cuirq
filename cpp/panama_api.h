@@ -25,6 +25,7 @@ void cuirq_set_model_data(const char* name, const char* json_data);
 void cuirq_update_model_data(const char* name, const char* json_data, const char* key_field);
 void cuirq_clear_model(const char* name);
 int  cuirq_get_model_count(const char* name);
+void cuirq_sort_model(const char* name, const char* role, bool ascending);
 
 void cuirq_set_auto_reload(bool enabled);
 bool cuirq_is_auto_reload_enabled(void);

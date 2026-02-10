@@ -59,6 +59,10 @@ int cuirq_get_model_count(const char* name) {
     return cuirq::get_model_count(name);
 }
 
+void cuirq_sort_model(const char* name, const char* role, bool ascending) {
+    cuirq::sort_model(name, role, ascending);
+}
+
 void cuirq_set_auto_reload(bool enabled) {
     cuirq::set_auto_reload(enabled);
 }

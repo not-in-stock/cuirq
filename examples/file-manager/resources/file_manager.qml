@@ -16,6 +16,8 @@ Item {
     property int itemCount: 0
     property var breadcrumbs: []
     property string viewMode: "grid"
+    property string sortField: "name"
+    property bool sortAscending: true
 
     function applyState(key, value) {
         if (key === "currentPath") root.currentPath = value
@@ -26,6 +28,8 @@ Item {
             try { root.breadcrumbs = JSON.parse(value) }
             catch (e) { root.breadcrumbs = [] }
         }
+        else if (key === "sortField") root.sortField = value
+        else if (key === "sortAscending") root.sortAscending = (value === "true")
     }
 
     Connections {
@@ -68,6 +72,8 @@ Item {
                 FileList {
                     id: listView
                     anchors.fill: parent
+                    sortField: root.sortField
+                    sortAscending: root.sortAscending
                     visible: root.viewMode === "list"
                     opacity: 0
                     transform: Translate { id: listTranslate; y: theme.animViewOffset }

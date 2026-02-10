@@ -32,6 +32,7 @@ public:
     // Data management
     Q_INVOKABLE void setJsonData(const QString& jsonData);
     void updateJsonData(const QString& jsonData, const QString& keyField);
+    Q_INVOKABLE void sortByRole(const QString& roleName, bool ascending);
     Q_INVOKABLE void clear();
     Q_INVOKABLE int count() const { return m_items.size(); }
 

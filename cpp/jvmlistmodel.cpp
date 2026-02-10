@@ -1,5 +1,6 @@
 #include "jvmlistmodel.h"
 #include <QDebug>
+#include <algorithm>
 
 JvmListModel::JvmListModel(QObject *parent)
   : QAbstractListModel(parent)
@@ -160,6 +161,42 @@ void JvmListModel::updateJsonData(const QString& jsonData, const QString& keyFie
             }
         }
     }
+}
+
+void JvmListModel::sortByRole(const QString& roleName, bool ascending)
+{
+    if (m_items.isEmpty()) return;
+
+    // Numeric roles: compare as double instead of string
+    static const QSet<QString> numericRoles = {"sizeBytes", "modified", "size"};
+    bool numeric = numericRoles.contains(roleName);
+
+    emit layoutAboutToBeChanged();
+
+    std::stable_sort(m_items.begin(), m_items.end(),
+        [&](const QVariantMap& a, const QVariantMap& b) {
+            // Directories always first
+            bool aDirVal = a.value("isDir").toBool();
+            bool bDirVal = b.value("isDir").toBool();
+            if (aDirVal != bDirVal) return aDirVal > bDirVal;
+
+            // Compare by requested role
+            QVariant va = a.value(roleName);
+            QVariant vb = b.value(roleName);
+
+            int cmp;
+            if (numeric) {
+                double da = va.toDouble();
+                double db = vb.toDouble();
+                cmp = (da < db) ? -1 : (da > db) ? 1 : 0;
+            } else {
+                cmp = QString::compare(va.toString(), vb.toString(), Qt::CaseInsensitive);
+            }
+
+            return ascending ? (cmp < 0) : (cmp > 0);
+        });
+
+    emit layoutChanged();
 }
 
 void JvmListModel::clear()

@@ -341,6 +341,16 @@ int get_model_count(const char* name) {
     return model->count();
 }
 
+void sort_model(const char* name, const char* role, bool ascending) {
+    QString qname = QString::fromUtf8(name);
+    JvmListModel* model = g_models.value(qname, nullptr);
+    if (!model) {
+        std::cerr << "[CPP] ERROR: Model not found: " << name << std::endl;
+        return;
+    }
+    model->sortByRole(QString::fromUtf8(role), ascending);
+}
+
 void start_directory_watch(const char* path) {
     if (!g_directoryWatcher) {
         std::cerr << "[CPP] ERROR: DirectoryWatcher not initialized." << std::endl;

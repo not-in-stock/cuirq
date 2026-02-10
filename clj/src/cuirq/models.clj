@@ -48,6 +48,11 @@
   (let [json-str (json/write-str data)]
     (PanamaBridge/updateModelData (name model-name) json-str ^String key-field)))
 
+(defn sort!
+  "Sort model items in C++ by role name. Directories always stay first."
+  [model-name role ascending]
+  (PanamaBridge/sortModel (name model-name) ^String role (boolean ascending)))
+
 (defn clear!
   "Clear all items from a model."
   [model-name]

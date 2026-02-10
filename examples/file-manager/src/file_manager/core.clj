@@ -14,6 +14,15 @@
 ;; Cache last directory listing to avoid redundant updates from FSEvents
 (defonce ^:private last-listing (atom nil))
 
+;; Sort state — persists across navigation
+(defonce ^:private sort-state (atom {:field "name" :ascending true}))
+
+(defn- apply-sort!
+  "Apply current sort state to the files model."
+  []
+  (let [{:keys [field ascending]} @sort-state]
+    (models/sort! :files field ascending)))
+
 (defn- file-type
   "Classify file extension into a type category."
   [^String ext]
@@ -64,6 +73,7 @@
                     :path      (.getAbsolutePath f)
                     :isDir     is-dir
                     :size      (if is-dir "" (format-size (.length f)))
+                    :sizeBytes (if is-dir 0 (.length f))
                     :modified  (.lastModified f)
                     :extension (or ext "")
                     :fileType  (if is-dir "folder" (file-type ext))}))))))
@@ -101,6 +111,7 @@
         (let [items (list-directory canonical)]
           (reset! last-listing items)
           (models/set-data! :files items)
+          (apply-sort!)
           ;; Update state
           (state/set-state!
            {:currentPath  canonical
@@ -126,6 +137,7 @@
         (let [items (list-directory prev)]
           (reset! last-listing items)
           (models/set-data! :files items)
+          (apply-sort!)
           (state/set-state!
            {:currentPath  prev
             :canGoBack    (boolean (seq (:back @nav-history)))
@@ -148,6 +160,7 @@
         (let [items (list-directory next-path)]
           (reset! last-listing items)
           (models/set-data! :files items)
+          (apply-sort!)
           (state/set-state!
            {:currentPath  next-path
             :canGoBack    (boolean (seq (:back @nav-history)))
@@ -222,6 +235,7 @@
                                   (when (not= items @last-listing)
                                     (reset! last-listing items)
                                     (models/update-data! :files items "path")
+                                    (apply-sort!)
                                     (state/update-state! assoc :itemCount (count items))))))))
 
         (cuirq/on-signal! :themeChanged
@@ -229,6 +243,16 @@
                             (let [args (json/read-str json-args)
                                   mode (first args)]
                               (cuirq/set-vibrancy-appearance! mode))))
+
+        (cuirq/on-signal! :sortChanged
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  field (first args)
+                                  ascending (= (second args) "true")]
+                              (reset! sort-state {:field field :ascending ascending})
+                              (models/sort! :files field ascending)
+                              (state/set-state! {:sortField field
+                                                 :sortAscending ascending}))))
 
         ;; Load QML
         (println " [4/4] Loading QML...")

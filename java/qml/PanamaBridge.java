@@ -39,6 +39,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle ENABLE_TOOLBAR_VIBRANCY;
     private static final MethodHandle SET_VIBRANCY_APPEARANCE;
     private static final MethodHandle SET_VIBRANCY_ALWAYS_ACTIVE;
+    private static final MethodHandle SORT_MODEL;
     private static final MethodHandle START_DIRECTORY_WATCH;
     private static final MethodHandle STOP_DIRECTORY_WATCH;
 
@@ -107,6 +108,8 @@ public class PanamaBridge implements AutoCloseable {
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         SET_VIBRANCY_ALWAYS_ACTIVE = downcall("cuirq_set_vibrancy_always_active",
                 FunctionDescriptor.ofVoid(ValueLayout.JAVA_BOOLEAN));
+        SORT_MODEL = downcall("cuirq_sort_model",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN));
         START_DIRECTORY_WATCH = downcall("cuirq_start_directory_watch",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         STOP_DIRECTORY_WATCH = downcall("cuirq_stop_directory_watch",
@@ -279,6 +282,16 @@ public class PanamaBridge implements AutoCloseable {
             return (int) GET_MODEL_COUNT.invokeExact(nameStr);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to get model count", t);
+        }
+    }
+
+    public static void sortModel(String modelName, String role, boolean ascending) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment nameStr = arena.allocateFrom(modelName);
+            MemorySegment roleStr = arena.allocateFrom(role);
+            SORT_MODEL.invokeExact(nameStr, roleStr, ascending);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to sort model", t);
         }
     }
 

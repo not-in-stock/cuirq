@@ -29,6 +29,7 @@ void set_model_data(const char* name, const char* json_data);
 void update_model_data(const char* name, const char* json_data, const char* key_field);
 void clear_model(const char* name);
 int get_model_count(const char* name);
+void sort_model(const char* name, const char* role, bool ascending);
 
 // Hot-reload
 void set_auto_reload(bool enabled);
