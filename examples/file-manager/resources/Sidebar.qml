@@ -8,22 +8,26 @@ Rectangle {
     property string currentPath: ""
 
     function _toPath(url) {
-        return url.toString().replace("file://", "")
+        return url.toString().replace("file://", "");
     }
 
     readonly property string _home: _toPath(StandardPaths.writableLocation(StandardPaths.HomeLocation))
     readonly property var _pathMap: ({
-        "home":      _home,
-        "desktop":   _home + "/Desktop",
-        "documents": _home + "/Documents",
-        "downloads": _home + "/Downloads",
-        "pictures":  _home + "/Pictures",
-        "music":     _home + "/Music"
-    })
+            "home": _home,
+            "desktop": _home + "/Desktop",
+            "documents": _home + "/Documents",
+            "downloads": _home + "/Downloads",
+            "pictures": _home + "/Pictures",
+            "music": _home + "/Music"
+        })
 
     width: theme.sidebarWidth
     color: theme.sidebarBackground
-    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+    Behavior on color {
+        ColorAnimation {
+            duration: theme.animDuration
+        }
+    }
 
     // Right border
     Rectangle {
@@ -32,7 +36,11 @@ Rectangle {
         anchors.bottom: parent.bottom
         width: 1
         color: theme.separator
-        Behavior on color { ColorAnimation { duration: theme.animDuration } }
+        Behavior on color {
+            ColorAnimation {
+                duration: theme.animDuration
+            }
+        }
     }
 
     ColumnLayout {
@@ -56,12 +64,36 @@ Rectangle {
 
         Repeater {
             model: ListModel {
-                ListElement { label: "Home";      iconFile: "icons/home.svg";      key: "home" }
-                ListElement { label: "Desktop";   iconFile: "icons/desktop.svg";   key: "desktop" }
-                ListElement { label: "Documents"; iconFile: "icons/documents.svg"; key: "documents" }
-                ListElement { label: "Downloads"; iconFile: "icons/downloads.svg"; key: "downloads" }
-                ListElement { label: "Pictures";  iconFile: "icons/pictures.svg";  key: "pictures" }
-                ListElement { label: "Music";     iconFile: "icons/music.svg";     key: "music" }
+                ListElement {
+                    label: "Home"
+                    iconFile: "icons/home.svg"
+                    key: "home"
+                }
+                ListElement {
+                    label: "Desktop"
+                    iconFile: "icons/desktop.svg"
+                    key: "desktop"
+                }
+                ListElement {
+                    label: "Documents"
+                    iconFile: "icons/documents.svg"
+                    key: "documents"
+                }
+                ListElement {
+                    label: "Downloads"
+                    iconFile: "icons/downloads.svg"
+                    key: "downloads"
+                }
+                ListElement {
+                    label: "Pictures"
+                    iconFile: "icons/pictures.svg"
+                    key: "pictures"
+                }
+                ListElement {
+                    label: "Music"
+                    iconFile: "icons/music.svg"
+                    key: "music"
+                }
             }
 
             Rectangle {
@@ -77,8 +109,16 @@ Rectangle {
                 radius: 8
                 color: isActive || sidebarMouse.containsMouse ? theme.sidebarActive : theme.sidebarActiveOff
 
-                Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
-                Behavior on border.color { ColorAnimation { duration: theme.animHoverDuration } }
+                Behavior on color {
+                    ColorAnimation {
+                        duration: theme.animHoverDuration
+                    }
+                }
+                Behavior on border.color {
+                    ColorAnimation {
+                        duration: theme.animHoverDuration
+                    }
+                }
 
                 Row {
                     anchors.verticalCenter: parent.verticalCenter
@@ -88,8 +128,10 @@ Rectangle {
 
                     Image {
                         source: iconFile
-                        width: 20; height: 20
-                        sourceSize.width: 20; sourceSize.height: 20
+                        width: 20
+                        height: 20
+                        sourceSize.width: 20
+                        sourceSize.height: 20
                         anchors.verticalCenter: parent.verticalCenter
                     }
 
@@ -111,6 +153,8 @@ Rectangle {
             }
         }
 
-        Item { Layout.fillHeight: true }
+        Item {
+            Layout.fillHeight: true
+        }
     }
 }

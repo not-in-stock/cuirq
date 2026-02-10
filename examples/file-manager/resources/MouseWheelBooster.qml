@@ -9,8 +9,8 @@ WheelHandler {
     orientation: Qt.Vertical
 
     onRotationChanged: {
-        let velocity = rotation * speedMultiplier * 12
-        flickable.flick(0, velocity)
-        rotation = 0
+        let velocity = rotation * speedMultiplier * 12;
+        flickable.flick(0, velocity);
+        rotation = 0;
     }
 }

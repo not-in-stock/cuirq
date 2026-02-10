@@ -4,7 +4,11 @@ import QtQuick.Controls
 Rectangle {
     id: fileGrid
     color: theme.background
-    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+    Behavior on color {
+        ColorAnimation {
+            duration: theme.animDuration
+        }
+    }
 
     readonly property real _availableWidth: Math.max(theme.gridMinCellWidth, gridView.width)
     readonly property int _columns: Math.max(1, Math.floor(_availableWidth / theme.gridMinCellWidth))
@@ -21,7 +25,9 @@ Rectangle {
         displayMarginEnd: theme.statusBarHeight
         clip: false
         ScrollBar.vertical: OverlayScrollBar {}
-        MouseWheelBooster { flickable: gridView }
+        MouseWheelBooster {
+            flickable: gridView
+        }
 
         model: files
 
@@ -40,15 +46,37 @@ Rectangle {
         }
 
         add: Transition {
-            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: theme.animItemDuration }
-            NumberAnimation { property: "scale"; from: theme.animItemScale; to: 1; duration: theme.animItemDuration }
+            NumberAnimation {
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: theme.animItemDuration
+            }
+            NumberAnimation {
+                property: "scale"
+                from: theme.animItemScale
+                to: 1
+                duration: theme.animItemDuration
+            }
         }
         remove: Transition {
-            NumberAnimation { property: "opacity"; to: 0; duration: theme.animItemDuration }
-            NumberAnimation { property: "scale"; to: theme.animItemScale; duration: theme.animItemDuration }
+            NumberAnimation {
+                property: "opacity"
+                to: 0
+                duration: theme.animItemDuration
+            }
+            NumberAnimation {
+                property: "scale"
+                to: theme.animItemScale
+                duration: theme.animItemDuration
+            }
         }
         displaced: Transition {
-            NumberAnimation { properties: "x,y"; duration: theme.animItemDuration; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                properties: "x,y"
+                duration: theme.animItemDuration
+                easing.type: Easing.OutCubic
+            }
         }
 
         Text {
@@ -59,5 +87,4 @@ Rectangle {
             visible: gridView.count === 0
         }
     }
-
 }

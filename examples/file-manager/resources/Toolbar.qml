@@ -10,12 +10,14 @@ Rectangle {
     property string viewMode: "grid"
 
     signal viewModeRequested(string mode)
-    signal themeCycled()
+    signal themeCycled
 
     height: theme.toolbarHeight
     color: "transparent"
 
-    MouseArea { anchors.fill: parent }
+    MouseArea {
+        anchors.fill: parent
+    }
 
     // Bottom border
     Rectangle {
@@ -24,7 +26,11 @@ Rectangle {
         anchors.bottom: parent.bottom
         height: 1
         color: theme.separator
-        Behavior on color { ColorAnimation { duration: theme.animDuration } }
+        Behavior on color {
+            ColorAnimation {
+                duration: theme.animDuration
+            }
+        }
     }
 
     RowLayout {
@@ -43,8 +49,10 @@ Rectangle {
             Image {
                 anchors.centerIn: parent
                 source: "icons/arrow-left.svg"
-                width: 18; height: 18
-                sourceSize.width: 18; sourceSize.height: 18
+                width: 18
+                height: 18
+                sourceSize.width: 18
+                sourceSize.height: 18
                 opacity: toolbar.canGoBack ? 1.0 : 0.3
             }
 
@@ -53,7 +61,10 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: toolbar.canGoBack ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: { if (toolbar.canGoBack) signalForwarder.emitSignal("goBack", []) }
+                onClicked: {
+                    if (toolbar.canGoBack)
+                        signalForwarder.emitSignal("goBack", []);
+                }
             }
         }
 
@@ -67,8 +78,10 @@ Rectangle {
             Image {
                 anchors.centerIn: parent
                 source: "icons/arrow-right.svg"
-                width: 18; height: 18
-                sourceSize.width: 18; sourceSize.height: 18
+                width: 18
+                height: 18
+                sourceSize.width: 18
+                sourceSize.height: 18
                 opacity: toolbar.canGoForward ? 1.0 : 0.3
             }
 
@@ -77,7 +90,10 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: toolbar.canGoForward ? Qt.PointingHandCursor : Qt.ArrowCursor
-                onClicked: { if (toolbar.canGoForward) signalForwarder.emitSignal("goForward", []) }
+                onClicked: {
+                    if (toolbar.canGoForward)
+                        signalForwarder.emitSignal("goForward", []);
+                }
             }
         }
 
@@ -116,9 +132,7 @@ Rectangle {
                             text: toolbar.breadcrumbs[index].name
                             font.pixelSize: 13
                             font.bold: index === toolbar.breadcrumbs.length - 1
-                            color: index === toolbar.breadcrumbs.length - 1
-                                ? theme.textHeading
-                                : theme.textSecondary
+                            color: index === toolbar.breadcrumbs.length - 1 ? theme.textHeading : theme.textSecondary
                         }
 
                         MouseArea {
@@ -135,10 +149,16 @@ Rectangle {
 
         // Separator
         Rectangle {
-            width: 1; height: 24
+            width: 1
+            height: 24
             color: theme.border
-            Layout.leftMargin: 4; Layout.rightMargin: 4
-            Behavior on color { ColorAnimation { duration: theme.animDuration } }
+            Layout.leftMargin: 4
+            Layout.rightMargin: 4
+            Behavior on color {
+                ColorAnimation {
+                    duration: theme.animDuration
+                }
+            }
         }
 
         // View mode toggle
@@ -146,40 +166,50 @@ Rectangle {
             spacing: 2
 
             Rectangle {
-                width: 32; height: 32; radius: 6
-                color: toolbar.viewMode === "grid"
-                    ? theme.surfaceActive
-                    : (gridMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+                width: 32
+                height: 32
+                radius: 6
+                color: toolbar.viewMode === "grid" ? theme.surfaceActive : (gridMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
                     source: "icons/grid-view.svg"
-                    width: 18; height: 18; sourceSize.width: 18; sourceSize.height: 18
+                    width: 18
+                    height: 18
+                    sourceSize.width: 18
+                    sourceSize.height: 18
                     opacity: toolbar.viewMode === "grid" ? 1.0 : 0.5
                 }
 
                 MouseArea {
-                    id: gridMouse; anchors.fill: parent; hoverEnabled: true
+                    id: gridMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: toolbar.viewModeRequested("grid")
                 }
             }
 
             Rectangle {
-                width: 32; height: 32; radius: 6
-                color: toolbar.viewMode === "list"
-                    ? theme.surfaceActive
-                    : (listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+                width: 32
+                height: 32
+                radius: 6
+                color: toolbar.viewMode === "list" ? theme.surfaceActive : (listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
                     source: "icons/list-view.svg"
-                    width: 18; height: 18; sourceSize.width: 18; sourceSize.height: 18
+                    width: 18
+                    height: 18
+                    sourceSize.width: 18
+                    sourceSize.height: 18
                     opacity: toolbar.viewMode === "list" ? 1.0 : 0.5
                 }
 
                 MouseArea {
-                    id: listMouse; anchors.fill: parent; hoverEnabled: true
+                    id: listMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: toolbar.viewModeRequested("list")
                 }
@@ -188,20 +218,25 @@ Rectangle {
 
         // Theme toggle (light → dark → system)
         Rectangle {
-            width: 32; height: 32; radius: 6
+            width: 32
+            height: 32
+            radius: 6
             color: themeMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
             Layout.leftMargin: 4
 
             Image {
                 anchors.centerIn: parent
-                source: theme.themeMode === "light" ? "icons/sun.svg"
-                      : theme.themeMode === "dark"  ? "icons/moon.svg"
-                      : "icons/system-theme.svg"
-                width: 18; height: 18; sourceSize.width: 18; sourceSize.height: 18
+                source: theme.themeMode === "light" ? "icons/sun.svg" : theme.themeMode === "dark" ? "icons/moon.svg" : "icons/system-theme.svg"
+                width: 18
+                height: 18
+                sourceSize.width: 18
+                sourceSize.height: 18
             }
 
             MouseArea {
-                id: themeMouse; anchors.fill: parent; hoverEnabled: true
+                id: themeMouse
+                anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: toolbar.themeCycled()
             }

@@ -76,11 +76,16 @@
   ;; QML tooling
   lint-qml
   {:doc "Lint QML files for file-manager example"
-   :task (shell "qmllint -I $(dirname $(which qmlformat))/../lib/qt-6/qml examples/file-manager/resources/*.qml")}
+   :requires ([babashka.fs :as fs])
+   :task (let [import-path (str (fs/parent (fs/which "qmlformat")) "/../lib/qt-6/qml")
+               files (map str (fs/glob "examples/file-manager/resources" "*.qml"))]
+           (apply shell "qmllint" "-I" import-path files))}
 
   format-qml
   {:doc "Format QML files for file-manager example"
-   :task (shell "qmlformat -i examples/file-manager/resources/*.qml")}
+   :requires ([babashka.fs :as fs])
+   :task (let [files (map str (fs/glob "examples/file-manager/resources" "*.qml"))]
+           (apply shell "qmlformat" "-i" files))}
 
   ;; Start nREPL server
   nrepl

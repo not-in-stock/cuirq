@@ -31,6 +31,10 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: root.overlayColor
-        Behavior on color { ColorAnimation { duration: theme.animDuration } }
+        Behavior on color {
+            ColorAnimation {
+                duration: theme.animDuration
+            }
+        }
     }
 }

@@ -4,7 +4,11 @@ import QtQuick.Controls
 Rectangle {
     id: fileList
     color: theme.background
-    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+    Behavior on color {
+        ColorAnimation {
+            duration: theme.animDuration
+        }
+    }
 
     property string sortField: "name"
     property bool sortAscending: true
@@ -26,14 +30,22 @@ Rectangle {
 
     function iconSource(type) {
         switch (type) {
-            case "folder":   return "icons/folder.svg"
-            case "document": return "icons/document.svg"
-            case "image":    return "icons/image.svg"
-            case "audio":    return "icons/audio.svg"
-            case "video":    return "icons/video.svg"
-            case "code":     return "icons/code.svg"
-            case "archive":  return "icons/archive.svg"
-            default:         return "icons/file.svg"
+        case "folder":
+            return "icons/folder.svg";
+        case "document":
+            return "icons/document.svg";
+        case "image":
+            return "icons/image.svg";
+        case "audio":
+            return "icons/audio.svg";
+        case "video":
+            return "icons/video.svg";
+        case "code":
+            return "icons/code.svg";
+        case "archive":
+            return "icons/archive.svg";
+        default:
+            return "icons/file.svg";
         }
     }
 
@@ -51,7 +63,9 @@ Rectangle {
         displayMarginEnd: theme.statusBarHeight
         spacing: theme.listItemSpacing
         ScrollBar.vertical: OverlayScrollBar {}
-        MouseWheelBooster { flickable: listView }
+        MouseWheelBooster {
+            flickable: listView
+        }
 
         model: files
 
@@ -63,7 +77,11 @@ Rectangle {
             clip: true
             color: listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
-            Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
+            Behavior on color {
+                ColorAnimation {
+                    duration: theme.animHoverDuration
+                }
+            }
 
             readonly property int depth: model.depth || 0
             readonly property int indentWidth: depth * fileList.indentStep
@@ -77,7 +95,10 @@ Rectangle {
                 spacing: 0
 
                 // Depth indentation
-                Item { width: listItem.indentWidth; height: 1 }
+                Item {
+                    width: listItem.indentWidth
+                    height: 1
+                }
 
                 // Expand/collapse chevron
                 Item {
@@ -90,29 +111,45 @@ Rectangle {
                     Image {
                         id: chevron
                         source: "icons/arrow-right.svg"
-                        width: 12; height: 12
-                        sourceSize.width: 12; sourceSize.height: 12
+                        width: 12
+                        height: 12
+                        sourceSize.width: 12
+                        sourceSize.height: 12
                         anchors.centerIn: parent
                         rotation: model.expanded ? 90 : 0
                         Behavior on rotation {
-                            NumberAnimation { duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
+                            NumberAnimation {
+                                duration: theme.animExpandHeight
+                                easing.type: Easing.OutCubic
+                            }
                         }
                     }
                 }
 
-                Item { width: model.isDir ? 0 : fileList.arrowWidth + fileList.arrowSpacing; height: 1 }
+                Item {
+                    width: model.isDir ? 0 : fileList.arrowWidth + fileList.arrowSpacing
+                    height: 1
+                }
 
                 // Spacing before icon
-                Item { width: fileList.iconPaddingLeft; height: 1 }
+                Item {
+                    width: fileList.iconPaddingLeft
+                    height: 1
+                }
 
                 Image {
                     source: fileList.iconSource(model.fileType)
-                    width: fileList.iconSize; height: fileList.iconSize
-                    sourceSize.width: fileList.iconSize; sourceSize.height: fileList.iconSize
+                    width: fileList.iconSize
+                    height: fileList.iconSize
+                    sourceSize.width: fileList.iconSize
+                    sourceSize.height: fileList.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Item { width: fileList.iconPaddingRight; height: 1 }
+                Item {
+                    width: fileList.iconPaddingRight
+                    height: 1
+                }
 
                 Text {
                     text: model.name
@@ -164,7 +201,7 @@ Rectangle {
                 hoverEnabled: true
                 onDoubleClicked: {
                     if (model.isDir) {
-                        signalForwarder.emitSignal("navigate", [model.path])
+                        signalForwarder.emitSignal("navigate", [model.path]);
                     }
                 }
             }
@@ -181,18 +218,43 @@ Rectangle {
 
         add: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "height"; from: 0; duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: theme.animExpandFade; easing.type: Easing.OutQuad }
+                NumberAnimation {
+                    property: "height"
+                    from: 0
+                    duration: theme.animExpandHeight
+                    easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                    property: "opacity"
+                    from: 0
+                    to: 1
+                    duration: theme.animExpandFade
+                    easing.type: Easing.OutQuad
+                }
             }
         }
         remove: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "height"; to: 0; duration: theme.animExpandHeight; easing.type: Easing.InCubic }
-                NumberAnimation { property: "opacity"; to: 0; duration: theme.animExpandFade; easing.type: Easing.InQuad }
+                NumberAnimation {
+                    property: "height"
+                    to: 0
+                    duration: theme.animExpandHeight
+                    easing.type: Easing.InCubic
+                }
+                NumberAnimation {
+                    property: "opacity"
+                    to: 0
+                    duration: theme.animExpandFade
+                    easing.type: Easing.InQuad
+                }
             }
         }
         displaced: Transition {
-            NumberAnimation { properties: "x,y"; duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
+            NumberAnimation {
+                properties: "x,y"
+                duration: theme.animExpandHeight
+                easing.type: Easing.OutCubic
+            }
         }
 
         Text {

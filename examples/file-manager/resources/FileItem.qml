@@ -14,18 +14,30 @@ Rectangle {
     radius: 8
     color: mouseArea.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
-    Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
+    Behavior on color {
+        ColorAnimation {
+            duration: theme.animHoverDuration
+        }
+    }
 
     function iconSource(type) {
         switch (type) {
-            case "folder":   return "icons/folder.svg"
-            case "document": return "icons/document.svg"
-            case "image":    return "icons/image.svg"
-            case "audio":    return "icons/audio.svg"
-            case "video":    return "icons/video.svg"
-            case "code":     return "icons/code.svg"
-            case "archive":  return "icons/archive.svg"
-            default:         return "icons/file.svg"
+        case "folder":
+            return "icons/folder.svg";
+        case "document":
+            return "icons/document.svg";
+        case "image":
+            return "icons/image.svg";
+        case "audio":
+            return "icons/audio.svg";
+        case "video":
+            return "icons/video.svg";
+        case "code":
+            return "icons/code.svg";
+        case "archive":
+            return "icons/archive.svg";
+        default:
+            return "icons/file.svg";
         }
     }
 
@@ -37,8 +49,10 @@ Rectangle {
 
         Image {
             source: fileItem.iconSource(fileItem.fileType)
-            width: 40; height: 40
-            sourceSize.width: 40; sourceSize.height: 40
+            width: 40
+            height: 40
+            sourceSize.width: 40
+            sourceSize.height: 40
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
@@ -69,7 +83,7 @@ Rectangle {
         hoverEnabled: true
         onDoubleClicked: {
             if (fileItem.isDir) {
-                signalForwarder.emitSignal("navigate", [fileItem.filePath])
+                signalForwarder.emitSignal("navigate", [fileItem.filePath]);
             }
         }
     }

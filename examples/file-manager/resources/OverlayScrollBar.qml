@@ -15,17 +15,17 @@ ScrollBar {
 
     on_EngagedChanged: {
         if (_engaged) {
-            hideTimer.stop()
-            _show = true
+            hideTimer.stop();
+            _show = true;
         } else {
-            hideTimer.restart()
+            hideTimer.restart();
         }
     }
 
     on_WindowActiveChanged: {
         if (!_windowActive && !_engaged) {
-            hideTimer.stop()
-            _show = false
+            hideTimer.stop();
+            _show = false;
         }
     }
 
@@ -42,7 +42,9 @@ ScrollBar {
         opacity: root._show ? 1 : 0
 
         Behavior on opacity {
-            NumberAnimation { duration: theme.scrollbarFadeDuration }
+            NumberAnimation {
+                duration: theme.scrollbarFadeDuration
+            }
         }
     }
 

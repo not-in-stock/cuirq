@@ -8,70 +8,64 @@ QtObject {
     readonly property bool systemDark: Qt.styleHints.colorScheme === Qt.Dark
 
     // Effective dark mode: derived from themeMode
-    readonly property bool darkMode: themeMode === "dark" ? true
-                                   : themeMode === "light" ? false
-                                   : systemDark
+    readonly property bool darkMode: themeMode === "dark" ? true : themeMode === "light" ? false : systemDark
 
     // Platform
     readonly property bool isMacOS: Qt.platform.os === "osx"
 
     // Backgrounds
-    readonly property color background:        darkMode ? "#1E293B" : "#FFFFFF"
-    readonly property color sidebarBackground: isMacOS ? "transparent"
-                                             : darkMode ? Qt.alpha("#1d1d20", 0.88)
-                                             : Qt.alpha("#f5f5f7", 0.88)
-    readonly property color toolbarOverlay:    darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
-                                                        : Qt.rgba(1, 1, 1, 0.65)
+    readonly property color background: darkMode ? "#1E293B" : "#FFFFFF"
+    readonly property color sidebarBackground: isMacOS ? "transparent" : darkMode ? Qt.alpha("#1d1d20", 0.88) : Qt.alpha("#f5f5f7", 0.88)
+    readonly property color toolbarOverlay: darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80) : Qt.rgba(1, 1, 1, 0.65)
 
     // Panels (list header, status bar, etc.)
-    readonly property color panelOverlay:      darkMode ? Qt.alpha(background, 0.65)
-                                                        : Qt.alpha(background, 0.45)
-    readonly property int   panelBlurRadius:  64
+    readonly property color panelOverlay: darkMode ? Qt.alpha(background, 0.65) : Qt.alpha(background, 0.45)
+    readonly property int panelBlurRadius: 64
 
     // Surfaces & interactive
-    readonly property color surfaceHover:      darkMode ? "#334155" : "#F1F5F9"
-    readonly property color surfaceHoverOff:   Qt.alpha(surfaceHover, 0)
-    readonly property color surfaceActive:     darkMode ? Qt.rgba(0.2, 0.25, 0.33, 0.3) : Qt.rgba(0, 0, 0, 0.1)
-    readonly property color surfaceActiveOff:  Qt.alpha(surfaceActive, 0)
+    readonly property color surfaceHover: darkMode ? "#334155" : "#F1F5F9"
+    readonly property color surfaceHoverOff: Qt.alpha(surfaceHover, 0)
+    readonly property color surfaceActive: darkMode ? Qt.rgba(0.2, 0.25, 0.33, 0.3) : Qt.rgba(0, 0, 0, 0.1)
+    readonly property color surfaceActiveOff: Qt.alpha(surfaceActive, 0)
 
-    readonly property color sidebarActive:     darkMode ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.1)
-    readonly property color sidebarActiveOff:  Qt.alpha(sidebarActive, 0)
-    readonly property color border:            darkMode ? "#334155" : "#E2E8F0"
-    readonly property color separator:         darkMode ? Qt.rgba(0, 0, 0, 0.45) : Qt.rgba(0, 0, 0, 0.1)
+    readonly property color sidebarActive: darkMode ? Qt.rgba(1, 1, 1, 0.1) : Qt.rgba(0, 0, 0, 0.1)
+    readonly property color sidebarActiveOff: Qt.alpha(sidebarActive, 0)
+    readonly property color border: darkMode ? "#334155" : "#E2E8F0"
+    readonly property color separator: darkMode ? Qt.rgba(0, 0, 0, 0.45) : Qt.rgba(0, 0, 0, 0.1)
 
     // Text
-    readonly property color textPrimary:   darkMode ? "#E2E8F0" : "#334155"
+    readonly property color textPrimary: darkMode ? "#E2E8F0" : "#334155"
     readonly property color textSecondary: darkMode ? "#94A3B8" : "#64748B"
-    readonly property color textTertiary:  darkMode ? "#64748B" : "#94A3B8"
-    readonly property color textHeading:   darkMode ? "#F8FAFC" : "#0F172A"
+    readonly property color textTertiary: darkMode ? "#64748B" : "#94A3B8"
+    readonly property color textHeading: darkMode ? "#F8FAFC" : "#0F172A"
     readonly property color textSeparator: darkMode ? "#475569" : "#CBD5E1"
 
     // Animation
-    readonly property int animDuration:      200   // theme color transitions
+    readonly property int animDuration: 200   // theme color transitions
     readonly property int animHoverDuration: 100   // hover highlight
-    readonly property int animViewDuration:  250   // content fade/slide on navigation
-    readonly property real animViewOffset:   8     // slide distance (px)
-    readonly property int animItemDuration:  200   // add/remove/displaced item transitions
-    readonly property real animItemScale:    0.8   // scale-from for add, scale-to for remove
-    readonly property int animExpandHeight:  200   // tree expand/collapse height
-    readonly property int animExpandFade:    100   // tree expand/collapse opacity
+    readonly property int animViewDuration: 250   // content fade/slide on navigation
+    readonly property real animViewOffset: 8     // slide distance (px)
+    readonly property int animItemDuration: 200   // add/remove/displaced item transitions
+    readonly property real animItemScale: 0.8   // scale-from for add, scale-to for remove
+    readonly property int animExpandHeight: 200   // tree expand/collapse height
+    readonly property int animExpandFade: 100   // tree expand/collapse opacity
 
     // Layout
-    readonly property int toolbarHeight:    48
-    readonly property int sidebarWidth:     220
+    readonly property int toolbarHeight: 48
+    readonly property int sidebarWidth: 220
     readonly property int gridMinCellWidth: 120
-    readonly property int gridCellHeight:   120
-    readonly property int gridPadding:      20    // left inset for grid content
-    readonly property int listPadding:      8     // inset for list content
-    readonly property int listItemHeight:   34
-    readonly property int listItemSpacing:  1
+    readonly property int gridCellHeight: 120
+    readonly property int gridPadding: 20    // left inset for grid content
+    readonly property int listPadding: 8     // inset for list content
+    readonly property int listItemHeight: 34
+    readonly property int listItemSpacing: 1
     readonly property int listHeaderHeight: 28
-    readonly property int statusBarHeight:  28
+    readonly property int statusBarHeight: 28
 
     // Scrollbar
-    readonly property color scrollbarColor:    darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)
-    readonly property real scrollbarWidth:     6
-    readonly property real scrollbarRadius:    3
-    readonly property int scrollbarFadeDelay:  800   // ms before auto-hide
+    readonly property color scrollbarColor: darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)
+    readonly property real scrollbarWidth: 6
+    readonly property real scrollbarRadius: 3
+    readonly property int scrollbarFadeDelay: 800   // ms before auto-hide
     readonly property int scrollbarFadeDuration: 300 // fade animation ms
 }

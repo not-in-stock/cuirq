@@ -16,7 +16,11 @@ Rectangle {
         anchors.top: parent.top
         height: 1
         color: theme.border
-        Behavior on color { ColorAnimation { duration: theme.animDuration } }
+        Behavior on color {
+            ColorAnimation {
+                duration: theme.animDuration
+            }
+        }
     }
 
     RowLayout {
@@ -31,7 +35,9 @@ Rectangle {
             color: theme.textSecondary
         }
 
-        Item { Layout.fillWidth: true }
+        Item {
+            Layout.fillWidth: true
+        }
 
         Text {
             text: statusBar.currentPath
