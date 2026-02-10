@@ -10,7 +10,7 @@ ScrollBar {
     padding: 2
 
     property bool _show: false
-    property bool _engaged: active || (parent instanceof Flickable && parent.movingVertically)
+    property bool _engaged: active || (parent instanceof Flickable && (orientation === Qt.Vertical ? parent.movingVertically : parent.movingHorizontally))
     property bool _windowActive: Window.window ? Window.window.active : true
 
     on_EngagedChanged: {

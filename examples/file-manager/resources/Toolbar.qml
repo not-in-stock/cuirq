@@ -214,6 +214,31 @@ Rectangle {
                     onClicked: toolbar.viewModeRequested("list")
                 }
             }
+
+            Rectangle {
+                width: 32
+                height: 32
+                radius: 6
+                color: toolbar.viewMode === "columns" ? theme.surfaceActive : (colsMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+
+                Image {
+                    anchors.centerIn: parent
+                    source: "icons/columns-view.svg"
+                    width: 18
+                    height: 18
+                    sourceSize.width: 18
+                    sourceSize.height: 18
+                    opacity: toolbar.viewMode === "columns" ? 1.0 : 0.5
+                }
+
+                MouseArea {
+                    id: colsMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: toolbar.viewModeRequested("columns")
+                }
+            }
         }
 
         // Theme toggle (light → dark → system)

@@ -17,6 +17,8 @@ Item {
     property string viewMode: "grid"
     property string sortField: "name"
     property bool sortAscending: true
+    property int millerActiveCount: 0
+    property var millerColumns: []
 
     function applyState(key, value) {
         if (key === "currentPath")
@@ -37,6 +39,15 @@ Item {
             root.sortField = value;
         else if (key === "sortAscending")
             root.sortAscending = (value === "true");
+        else if (key === "millerActiveCount")
+            root.millerActiveCount = parseInt(value) || 0;
+        else if (key === "millerColumns") {
+            try {
+                root.millerColumns = JSON.parse(value);
+            } catch (e) {
+                root.millerColumns = [];
+            }
+        }
     }
 
     Connections {
@@ -95,6 +106,19 @@ Item {
                     }
                 }
 
+                FileColumns {
+                    id: columnsView
+                    anchors.fill: parent
+                    activeColumnCount: root.millerActiveCount
+                    columnsInfo: root.millerColumns
+                    visible: root.viewMode === "columns"
+                    opacity: 0
+                    transform: Translate {
+                        id: columnsTranslate
+                        y: theme.animViewOffset
+                    }
+                }
+
                 ParallelAnimation {
                     id: gridFadeIn
                     NumberAnimation {
@@ -135,19 +159,44 @@ Item {
                     }
                 }
 
+                ParallelAnimation {
+                    id: columnsFadeIn
+                    NumberAnimation {
+                        target: columnsView
+                        property: "opacity"
+                        from: 0
+                        to: 1
+                        duration: theme.animViewDuration
+                        easing.type: Easing.OutQuad
+                    }
+                    NumberAnimation {
+                        target: columnsTranslate
+                        property: "y"
+                        from: theme.animViewOffset
+                        to: 0
+                        duration: theme.animViewDuration
+                        easing.type: Easing.OutQuad
+                    }
+                }
+
                 Connections {
                     target: root
                     function onViewModeChanged() {
                         if (root.viewMode === "grid")
                             gridFadeIn.restart();
-                        else
+                        else if (root.viewMode === "list")
                             listFadeIn.restart();
+                        else if (root.viewMode === "columns")
+                            columnsFadeIn.restart();
+                        signalForwarder.emitSignal("viewModeChanged", [root.viewMode]);
                     }
                     function onCurrentPathChanged() {
                         if (root.viewMode === "grid")
                             gridFadeIn.restart();
-                        else
+                        else if (root.viewMode === "list")
                             listFadeIn.restart();
+                        else if (root.viewMode === "columns")
+                            columnsFadeIn.restart();
                     }
                 }
 
