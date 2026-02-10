@@ -162,14 +162,14 @@ Item {
                     height: contentArea.height
                     y: -theme.toolbarHeight
                     source: listHeaderBlurSource
-                    radius: 64
+                    radius: theme.panelBlurRadius
                     cached: false
                     transparentBorder: false
                 }
 
                 Rectangle {
                     anchors.fill: parent
-                    color: Qt.alpha(theme.background, 0.8)
+                    color: theme.panelOverlay
                     Behavior on color { ColorAnimation { duration: theme.animDuration } }
                 }
             }
@@ -300,14 +300,14 @@ Item {
                     height: contentArea.height
                     y: -(contentArea.height - statusBar.height)
                     source: statusBarBlurSource
-                    radius: 64
+                    radius: theme.panelBlurRadius
                     cached: false
                     transparentBorder: false
                 }
 
                 Rectangle {
                     anchors.fill: parent
-                    color: Qt.alpha(theme.background, 0.8)
+                    color: theme.panelOverlay
                     Behavior on color { ColorAnimation { duration: theme.animDuration } }
                 }
             }

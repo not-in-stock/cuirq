@@ -23,6 +23,11 @@ QtObject {
     readonly property color toolbarOverlay:    darkMode ? Qt.rgba(0.08, 0.1, 0.16, 0.80)
                                                         : Qt.rgba(1, 1, 1, 0.65)
 
+    // Panels (list header, status bar, etc.)
+    readonly property color panelOverlay:      darkMode ? Qt.alpha(background, 0.65)
+                                                        : Qt.alpha(background, 0.45)
+    readonly property int   panelBlurRadius:  64
+
     // Surfaces & interactive
     readonly property color surfaceHover:      darkMode ? "#334155" : "#F1F5F9"
     readonly property color surfaceHoverOff:   Qt.alpha(surfaceHover, 0)
@@ -59,7 +64,7 @@ QtObject {
     readonly property int listItemHeight:   40
     readonly property int listItemSpacing:  1
     readonly property int listHeaderHeight: 28
-    readonly property int statusBarHeight:  32
+    readonly property int statusBarHeight:  28
 
     // Scrollbar
     readonly property color scrollbarColor:    darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)
