@@ -15,6 +15,8 @@ Rectangle {
     height: theme.toolbarHeight
     color: "transparent"
 
+    MouseArea { anchors.fill: parent }
+
     // Bottom border
     Rectangle {
         anchors.left: parent.left
