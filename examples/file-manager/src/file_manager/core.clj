@@ -30,6 +30,9 @@
 ;;  :active-count N}
 (defonce ^:private miller-state (atom {:columns [] :active-count 0}))
 
+;; Cache last data set on each miller model to avoid redundant updates
+(defonce ^:private last-miller-data (atom {}))
+
 (defn- refresh-file-list!
   "Rebuild the flat tree and push to model. Updates watcher paths."
   []
@@ -101,14 +104,18 @@
                          :millerColumns cols-json)))
 
 (defn- populate-miller-model!
-  "Fill miller column model at index i with directory contents."
+  "Fill miller column model at index i with directory contents.
+   Skips update if data hasn't changed (dedup)."
   [i ^String path]
   (let [items (dirs/list-dir! path)]
-    (models/set-data! (miller-model-key i) items)))
+    (when (not= items (get @last-miller-data i))
+      (swap! last-miller-data assoc i items)
+      (models/update-data! (miller-model-key i) items "path"))))
 
 (defn- clear-miller-model!
   "Clear miller column model at index i."
   [i]
+  (swap! last-miller-data dissoc i)
   (models/clear! (miller-model-key i)))
 
 (defn miller-navigate-to!
@@ -217,15 +224,15 @@
             (reset! miller-state new-state)
             (push-miller-state! new-state)))))))
 
-(defn- refresh-miller-columns!
-  "Re-read all visible miller columns (e.g. after FS change)."
-  []
+(defn- refresh-miller-column!
+  "Re-read a specific miller column whose directory changed.
+   The path should already be invalidated in the cache."
+  [changed-path]
   (let [{:keys [columns active-count]} @miller-state]
     (doseq [i (range active-count)]
-      (let [col (nth columns i)
-            path (:path col)]
-        (dirs/invalidate! path)
-        (populate-miller-model! i path)))))
+      (let [col (nth columns i)]
+        (when (= (:path col) changed-path)
+          (populate-miller-model! i changed-path))))))
 
 (defn navigate-to!
   "Navigate to a directory path."
@@ -417,7 +424,7 @@
                                   changed-path (first args)]
                               (dirs/invalidate! changed-path)
                               (if (= @view-mode "columns")
-                                (refresh-miller-columns!)
+                                (refresh-miller-column! changed-path)
                                 (refresh-file-list!)))))
 
         (cuirq/on-signal! :millerSelect
