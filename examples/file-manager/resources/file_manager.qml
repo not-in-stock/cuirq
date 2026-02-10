@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -103,75 +102,26 @@ Item {
                 Component.onCompleted: gridFadeIn.start()
             }
 
-            // Toolbar blur background — captures content behind toolbar and blurs it
-            Item {
+            BlurPanel {
                 id: toolbarBlur
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 height: toolbar.height
                 z: 1
-                clip: true
-
-                ShaderEffectSource {
-                    id: toolbarBlurSource
-                    // Full contentArea size — no sourceRect, avoids scaling artifacts
-                    width: contentArea.width
-                    height: contentArea.height
-                    sourceItem: contentArea
-                    visible: false
-                }
-
-                FastBlur {
-                    width: contentArea.width
-                    height: contentArea.height
-                    source: toolbarBlurSource
-                    radius: 64
-                    cached: true
-                    transparentBorder: false
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: theme.toolbarOverlay
-                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
-                }
+                sourceItem: contentArea
+                overlayColor: theme.toolbarOverlay
             }
 
-            // List header blur background — same pattern as toolbar blur
-            Item {
+            BlurPanel {
                 id: listHeaderBlur
                 anchors.left: parent.left
                 anchors.right: parent.right
                 y: theme.toolbarHeight
                 height: theme.listHeaderHeight
                 z: 1
-                clip: true
                 visible: root.viewMode === "list"
-
-                ShaderEffectSource {
-                    id: listHeaderBlurSource
-                    width: contentArea.width
-                    height: contentArea.height
-                    sourceItem: contentArea
-                    visible: false
-                }
-
-                FastBlur {
-                    width: contentArea.width
-                    height: contentArea.height
-                    y: -theme.toolbarHeight
-                    source: listHeaderBlurSource
-                    radius: theme.panelBlurRadius
-                    cached: true
-                    transparentBorder: false
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: theme.panelOverlay
-                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
-                }
+                sourceItem: contentArea
             }
 
             // List header controls — on top of blur
@@ -277,39 +227,14 @@ Item {
                 }
             }
 
-            // Status bar blur background
-            Item {
+            BlurPanel {
                 id: statusBarBlur
                 anchors.bottom: parent.bottom
                 anchors.left: parent.left
                 anchors.right: parent.right
                 height: statusBar.height
                 z: 1
-                clip: true
-
-                ShaderEffectSource {
-                    id: statusBarBlurSource
-                    width: contentArea.width
-                    height: contentArea.height
-                    sourceItem: contentArea
-                    visible: false
-                }
-
-                FastBlur {
-                    width: contentArea.width
-                    height: contentArea.height
-                    y: -(contentArea.height - statusBar.height)
-                    source: statusBarBlurSource
-                    radius: theme.panelBlurRadius
-                    cached: true
-                    transparentBorder: false
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: theme.panelOverlay
-                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
-                }
+                sourceItem: contentArea
             }
 
             StatusBar {
