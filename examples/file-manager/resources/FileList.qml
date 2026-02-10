@@ -14,6 +14,7 @@ Rectangle {
     readonly property int colDateWidth: 120
     readonly property int colTypeWidth: 80
     readonly property int colRightWidth: colSizeWidth + colDateWidth + colTypeWidth
+    readonly property int listHeaderHeight: 28
 
     function iconSource(type) {
         switch (type) {
@@ -28,89 +29,10 @@ Rectangle {
         }
     }
 
-    // Column header
-    component ColumnHeader: Item {
-        id: colHeader
-        property string label
-        property string field
-        property bool active: fileList.sortField === field
-
-        height: parent.height
-
-        Rectangle {
-            anchors.fill: parent
-            color: headerMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
-            Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
-        }
-
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.left: parent.left
-            anchors.leftMargin: 12
-            spacing: 4
-
-            Text {
-                text: colHeader.label
-                font.pixelSize: 11
-                font.weight: colHeader.active ? Font.DemiBold : Font.Normal
-                color: colHeader.active ? theme.textPrimary : theme.textSecondary
-                anchors.verticalCenter: parent.verticalCenter
-            }
-
-            Text {
-                text: fileList.sortAscending ? "\u25B2" : "\u25BC"
-                font.pixelSize: 8
-                color: theme.textSecondary
-                visible: colHeader.active
-                anchors.verticalCenter: parent.verticalCenter
-            }
-        }
-
-        MouseArea {
-            id: headerMouse
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                if (fileList.sortField === colHeader.field) {
-                    fileList.sortAscending = !fileList.sortAscending
-                } else {
-                    fileList.sortField = colHeader.field
-                    fileList.sortAscending = true
-                }
-                signalForwarder.emitSignal("sortChanged", [fileList.sortField, fileList.sortAscending ? "true" : "false"])
-            }
-        }
-    }
-
-    Row {
-        id: listHeader
-        x: 0
-        y: theme.toolbarHeight
-        width: parent.width
-        height: 28
-        z: 1
-
-        ColumnHeader { label: "Name";          field: "name";      width: parent.width - fileList.colRightWidth - theme.listPadding }
-        ColumnHeader { label: "Size";          field: "sizeBytes"; width: fileList.colSizeWidth }
-        ColumnHeader { label: "Date Modified"; field: "modified";  width: fileList.colDateWidth }
-        ColumnHeader { label: "Type";          field: "fileType";  width: fileList.colTypeWidth }
-    }
-
-    // Header bottom separator
-    Rectangle {
-        x: 0
-        y: listHeader.y + listHeader.height - 1
-        width: parent.width
-        height: 1
-        z: 1
-        color: theme.separator
-    }
-
     ListView {
         id: listView
         anchors.fill: parent
-        topMargin: theme.toolbarHeight + listHeader.height + theme.listPadding
+        topMargin: theme.toolbarHeight + fileList.listHeaderHeight + theme.listPadding
         bottomMargin: theme.listPadding
         leftMargin: theme.listPadding
         rightMargin: theme.listPadding

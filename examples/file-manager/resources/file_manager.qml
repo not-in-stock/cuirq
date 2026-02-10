@@ -141,13 +141,131 @@ Item {
                 }
             }
 
-            // Toolbar controls — on top of blur
+            // List header blur background — same pattern as toolbar blur
+            Item {
+                id: listHeaderBlur
+                anchors.left: parent.left
+                anchors.right: parent.right
+                y: theme.toolbarHeight
+                height: listView.listHeaderHeight
+                z: 1
+                clip: true
+                visible: root.viewMode === "list"
+
+                ShaderEffectSource {
+                    id: listHeaderBlurSource
+                    width: contentArea.width
+                    height: contentArea.height
+                    sourceItem: contentArea
+                    visible: false
+                }
+
+                FastBlur {
+                    width: contentArea.width
+                    height: contentArea.height
+                    y: -theme.toolbarHeight
+                    source: listHeaderBlurSource
+                    radius: 64
+                    cached: false
+                    transparentBorder: false
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Qt.alpha(theme.background, 0.8)
+                    Behavior on color { ColorAnimation { duration: theme.animDuration } }
+                }
+            }
+
+            // List header controls — on top of blur
+            Item {
+                id: listHeaderControls
+                anchors.left: parent.left
+                anchors.right: parent.right
+                y: theme.toolbarHeight
+                height: listView.listHeaderHeight
+                z: 2
+                visible: root.viewMode === "list"
+
+                component ColumnHeader: Item {
+                    id: colHeader
+                    property string label
+                    property string field
+                    property bool active: root.sortField === field
+
+                    height: parent.height
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: headerMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+                        Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
+                    }
+
+                    Row {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        spacing: 4
+
+                        Text {
+                            text: colHeader.label
+                            font.pixelSize: 11
+                            font.weight: colHeader.active ? Font.DemiBold : Font.Normal
+                            color: colHeader.active ? theme.textPrimary : theme.textSecondary
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: root.sortAscending ? "\u25B2" : "\u25BC"
+                            font.pixelSize: 8
+                            color: theme.textSecondary
+                            visible: colHeader.active
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+
+                    MouseArea {
+                        id: headerMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root.sortField === colHeader.field) {
+                                root.sortAscending = !root.sortAscending
+                            } else {
+                                root.sortField = colHeader.field
+                                root.sortAscending = true
+                            }
+                            signalForwarder.emitSignal("sortChanged", [root.sortField, root.sortAscending ? "true" : "false"])
+                        }
+                    }
+                }
+
+                Row {
+                    anchors.fill: parent
+
+                    ColumnHeader { label: "Name";          field: "name";      width: parent.width - listView.colRightWidth - theme.listPadding }
+                    ColumnHeader { label: "Size";          field: "sizeBytes"; width: listView.colSizeWidth }
+                    ColumnHeader { label: "Date Modified"; field: "modified";  width: listView.colDateWidth }
+                    ColumnHeader { label: "Type";          field: "fileType";  width: listView.colTypeWidth }
+                }
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    height: 1
+                    color: theme.separator
+                }
+            }
+
+            // Toolbar controls — on top of everything
             Toolbar {
                 id: toolbar
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                z: 2
+                z: 3
                 canGoBack: root.canGoBack
                 canGoForward: root.canGoForward
                 breadcrumbs: root.breadcrumbs
