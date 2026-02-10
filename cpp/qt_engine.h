@@ -37,6 +37,7 @@ bool is_auto_reload_enabled();
 
 // Directory watching
 void start_directory_watch(const char* path);
+void watch_directories(const char* json_paths);
 void stop_directory_watch();
 
 // Platform

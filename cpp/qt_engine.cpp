@@ -16,6 +16,8 @@
 #include <QDir>
 #include <QTimer>
 #include <QQuickWindow>
+#include <QJsonDocument>
+#include <QJsonArray>
 #include <iostream>
 #include <vector>
 #include <dlfcn.h>
@@ -359,6 +361,20 @@ void start_directory_watch(const char* path) {
         return;
     }
     g_directoryWatcher->startWatching(QString::fromUtf8(path));
+}
+
+void watch_directories(const char* json_paths) {
+    if (!g_directoryWatcher) {
+        std::cerr << "[CPP] ERROR: DirectoryWatcher not initialized." << std::endl;
+        return;
+    }
+    QJsonDocument doc = QJsonDocument::fromJson(QByteArray(json_paths));
+    QJsonArray arr = doc.array();
+    QStringList paths;
+    for (const auto& val : arr) {
+        paths.append(val.toString());
+    }
+    g_directoryWatcher->startWatching(paths);
 }
 
 void stop_directory_watch() {

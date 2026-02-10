@@ -31,6 +31,7 @@ void cuirq_set_auto_reload(bool enabled);
 bool cuirq_is_auto_reload_enabled(void);
 
 void cuirq_start_directory_watch(const char* path);
+void cuirq_watch_directories(const char* json_paths);
 void cuirq_stop_directory_watch(void);
 
 void cuirq_hide_titlebar(void);

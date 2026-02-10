@@ -41,6 +41,7 @@ public class PanamaBridge implements AutoCloseable {
     private static final MethodHandle SET_VIBRANCY_ALWAYS_ACTIVE;
     private static final MethodHandle SORT_MODEL;
     private static final MethodHandle START_DIRECTORY_WATCH;
+    private static final MethodHandle WATCH_DIRECTORIES;
     private static final MethodHandle STOP_DIRECTORY_WATCH;
 
     // Upcall state for signal callbacks
@@ -111,6 +112,8 @@ public class PanamaBridge implements AutoCloseable {
         SORT_MODEL = downcall("cuirq_sort_model",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.JAVA_BOOLEAN));
         START_DIRECTORY_WATCH = downcall("cuirq_start_directory_watch",
+                FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
+        WATCH_DIRECTORIES = downcall("cuirq_watch_directories",
                 FunctionDescriptor.ofVoid(ValueLayout.ADDRESS));
         STOP_DIRECTORY_WATCH = downcall("cuirq_stop_directory_watch",
                 FunctionDescriptor.ofVoid());
@@ -350,6 +353,15 @@ public class PanamaBridge implements AutoCloseable {
             START_DIRECTORY_WATCH.invokeExact(pathStr);
         } catch (Throwable t) {
             throw new RuntimeException("Failed to start directory watch", t);
+        }
+    }
+
+    public static void watchDirectories(String jsonPaths) {
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment pathsStr = arena.allocateFrom(jsonPaths);
+            WATCH_DIRECTORIES.invokeExact(pathsStr);
+        } catch (Throwable t) {
+            throw new RuntimeException("Failed to watch directories", t);
         }
     }
 

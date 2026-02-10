@@ -3,7 +3,9 @@
 
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QTimer>
+#include <QSet>
 
 #include "qt_engine.h"
 
@@ -19,10 +21,11 @@ public:
     ~DirectoryWatcher() override;
 
     void startWatching(const QString& path);
+    void startWatching(const QStringList& paths);
     void stopWatching();
     void setSignalCallback(cuirq::signal_callback_t callback);
 
-    void restartDebounce();
+    void restartDebounce(const QString& changedPath);
 
 private:
     QTimer* m_debounceTimer;
@@ -31,7 +34,8 @@ private:
 #else
     QFileSystemWatcher* m_fsWatcher;
 #endif
-    QString m_watchedPath;
+    QStringList m_watchedPaths;
+    QSet<QString> m_pendingChanges;
     cuirq::signal_callback_t m_callback;
 };
 

@@ -1,5 +1,6 @@
 (ns cuirq.core
   "Core Qt QML integration API for cuirq."
+  (:require [clojure.data.json])
   (:import [qml PanamaBridge PanamaBridge$SignalHandler]))
 
 (set! *warn-on-reflection* true)
@@ -98,6 +99,15 @@
    a 'directoryChanged' signal with the path."
   [path]
   (PanamaBridge/startDirectoryWatch (str path)))
+
+(defn watch-directories!
+  "Watch multiple directories for changes (macOS FSEvents).
+   Replaces any previous watch. On change, fires 'directoryChanged'
+   with the specific changed directory path.
+   Paths should be a sequence of strings."
+  [paths]
+  (let [json-str (clojure.data.json/write-str (vec paths))]
+    (PanamaBridge/watchDirectories json-str)))
 
 (defn stop-directory-watch!
   "Stop watching the current directory."

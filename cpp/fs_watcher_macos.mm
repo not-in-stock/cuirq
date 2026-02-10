@@ -5,14 +5,20 @@
 
 static void fsEventsCallback(ConstFSEventStreamRef /*streamRef*/,
                              void* info,
-                             size_t /*numEvents*/,
-                             void* /*eventPaths*/,
+                             size_t numEvents,
+                             void* eventPaths,
                              const FSEventStreamEventFlags* /*eventFlags*/,
                              const FSEventStreamEventId* /*eventIds*/)
 {
     auto* watcher = static_cast<DirectoryWatcher*>(info);
-    // Restart debounce timer — we're on the main queue
-    watcher->restartDebounce();
+    char** paths = static_cast<char**>(eventPaths);
+
+    // Determine which watched directory each event belongs to
+    for (size_t i = 0; i < numEvents; i++) {
+        QString eventPath = QString::fromUtf8(paths[i]);
+        // FSEvents reports the exact changed path; find which watched dir it's under
+        watcher->restartDebounce(eventPath);
+    }
 }
 
 DirectoryWatcher::DirectoryWatcher(QObject* parent)
@@ -24,9 +30,12 @@ DirectoryWatcher::DirectoryWatcher(QObject* parent)
     m_debounceTimer->setSingleShot(true);
 
     connect(m_debounceTimer, &QTimer::timeout, this, [this]() {
-        if (m_callback && !m_watchedPath.isEmpty()) {
-            QByteArray pathBytes = m_watchedPath.toUtf8();
-            // JSON array with the path
+        if (!m_callback) return;
+        // Fire directoryChanged for each pending path
+        QSet<QString> pending;
+        pending.swap(m_pendingChanges);
+        for (const QString& path : pending) {
+            QByteArray pathBytes = path.toUtf8();
             QByteArray jsonArgs = "[\"" + pathBytes + "\"]";
             m_callback("directoryChanged", jsonArgs.constData());
         }
@@ -38,22 +47,53 @@ DirectoryWatcher::~DirectoryWatcher()
     stopWatching();
 }
 
-void DirectoryWatcher::restartDebounce()
+void DirectoryWatcher::restartDebounce(const QString& changedPath)
 {
+    // Find which watched directory this event path belongs to
+    for (const QString& watched : m_watchedPaths) {
+        if (changedPath.startsWith(watched)) {
+            m_pendingChanges.insert(watched);
+            break;
+        }
+    }
     m_debounceTimer->start(150);
 }
 
 void DirectoryWatcher::startWatching(const QString& path)
 {
+    startWatching(QStringList{path});
+}
+
+void DirectoryWatcher::startWatching(const QStringList& paths)
+{
+    if (paths.isEmpty()) {
+        stopWatching();
+        return;
+    }
+
+    // Sort for comparison and deepest-first matching
+    QStringList sorted = paths;
+    std::sort(sorted.begin(), sorted.end(),
+              [](const QString& a, const QString& b) { return a.length() > b.length(); });
+
+    // Skip if already watching the same paths
+    if (m_stream && sorted == m_watchedPaths) return;
+
     stopWatching();
+    m_watchedPaths = sorted;
 
-    m_watchedPath = path;
+    // Build CFArray of paths
+    QVector<CFStringRef> cfStrings;
+    cfStrings.reserve(paths.size());
+    for (const QString& p : paths) {
+        cfStrings.append(CFStringCreateWithCString(kCFAllocatorDefault,
+                                                    p.toUtf8().constData(),
+                                                    kCFStringEncodingUTF8));
+    }
 
-    CFStringRef cfPath = CFStringCreateWithCString(kCFAllocatorDefault,
-                                                    path.toUtf8().constData(),
-                                                    kCFStringEncodingUTF8);
     CFArrayRef pathsToWatch = CFArrayCreate(kCFAllocatorDefault,
-                                            (const void**)&cfPath, 1, nullptr);
+                                            (const void**)cfStrings.data(),
+                                            cfStrings.size(), nullptr);
 
     FSEventStreamContext context = {0, this, nullptr, nullptr, nullptr};
 
@@ -67,12 +107,11 @@ void DirectoryWatcher::startWatching(const QString& path)
         kFSEventStreamCreateFlagNoDefer | kFSEventStreamCreateFlagFileEvents
     );
 
-    CFRelease(cfPath);
+    for (CFStringRef s : cfStrings) CFRelease(s);
     CFRelease(pathsToWatch);
 
     if (!stream) {
-        std::cerr << "[CPP] ERROR: Failed to create FSEventStream for: "
-                  << path.toStdString() << std::endl;
+        std::cerr << "[CPP] ERROR: Failed to create FSEventStream" << std::endl;
         return;
     }
 
@@ -80,7 +119,7 @@ void DirectoryWatcher::startWatching(const QString& path)
     FSEventStreamStart(stream);
 
     m_stream = stream;
-    std::cout << "[CPP] Watching directory: " << path.toStdString() << std::endl;
+    std::cout << "[CPP] Watching " << paths.size() << " directories" << std::endl;
 }
 
 void DirectoryWatcher::stopWatching()
@@ -91,10 +130,10 @@ void DirectoryWatcher::stopWatching()
         FSEventStreamInvalidate(stream);
         FSEventStreamRelease(stream);
         m_stream = nullptr;
-        std::cout << "[CPP] Stopped watching directory" << std::endl;
     }
     m_debounceTimer->stop();
-    m_watchedPath.clear();
+    m_watchedPaths.clear();
+    m_pendingChanges.clear();
 }
 
 void DirectoryWatcher::setSignalCallback(cuirq::signal_callback_t callback)

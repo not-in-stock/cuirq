@@ -15,6 +15,14 @@ Rectangle {
     readonly property int colTypeWidth: 80
     readonly property int colRightWidth: colSizeWidth + colDateWidth + colTypeWidth
 
+    // Tree indentation
+    readonly property int iconSize: 24
+    readonly property int indentStep: iconSize / 2
+    readonly property int arrowWidth: 12
+    readonly property int arrowSpacing: 2
+    readonly property int rowLeftPadding: 8
+    readonly property int iconSpacing: 8
+
     function iconSource(type) {
         switch (type) {
             case "folder":   return "icons/folder.svg"
@@ -51,24 +59,59 @@ Rectangle {
             width: listView.width - listView.leftMargin - listView.rightMargin
             height: theme.listItemHeight
             radius: 6
+            clip: true
             color: listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
             Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
 
-            // Name column (icon + name)
+            readonly property int depth: model.depth || 0
+            readonly property int indentWidth: depth * fileList.indentStep
+
+            // Name column (indent + arrow + icon + name)
             Row {
                 anchors.verticalCenter: parent.verticalCenter
                 anchors.left: parent.left
-                anchors.leftMargin: 12
-                width: parent.width - fileList.colRightWidth - 12
-                spacing: 10
+                anchors.leftMargin: fileList.rowLeftPadding
+                width: parent.width - fileList.colRightWidth - fileList.rowLeftPadding
+                spacing: 0
+
+                // Depth indentation
+                Item { width: listItem.indentWidth; height: 1 }
+
+                // Expand/collapse chevron
+                Item {
+                    id: arrowItem
+                    width: model.isDir ? fileList.arrowWidth + fileList.arrowSpacing : 0
+                    height: parent.height
+                    visible: model.isDir
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    Image {
+                        id: chevron
+                        source: "icons/arrow-right.svg"
+                        width: 12; height: 12
+                        sourceSize.width: 12; sourceSize.height: 12
+                        anchors.centerIn: parent
+                        rotation: model.expanded ? 90 : 0
+                        Behavior on rotation {
+                            NumberAnimation { duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
+                        }
+                    }
+                }
+
+                Item { width: model.isDir ? 0 : fileList.arrowWidth + fileList.arrowSpacing; height: 1 }
+
+                // Spacing before icon
+                Item { width: fileList.iconSpacing; height: 1 }
 
                 Image {
                     source: fileList.iconSource(model.fileType)
-                    width: 24; height: 24
-                    sourceSize.width: 24; sourceSize.height: 24
+                    width: fileList.iconSize; height: fileList.iconSize
+                    sourceSize.width: fileList.iconSize; sourceSize.height: fileList.iconSize
                     anchors.verticalCenter: parent.verticalCenter
                 }
+
+                Item { width: fileList.iconSpacing; height: 1 }
 
                 Text {
                     text: model.name
@@ -76,7 +119,7 @@ Rectangle {
                     color: theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 36
+                    width: parent.width - listItem.indentWidth - fileList.arrowWidth - fileList.arrowSpacing - fileList.iconSize - fileList.iconSpacing * 2
                 }
             }
 
@@ -124,18 +167,31 @@ Rectangle {
                     }
                 }
             }
+
+            // Expand/collapse click area — on top of listMouse
+            MouseArea {
+                visible: model.isDir
+                x: fileList.rowLeftPadding + listItem.indentWidth - 4
+                width: fileList.arrowWidth + fileList.arrowSpacing + 8
+                height: parent.height
+                onClicked: signalForwarder.emitSignal("toggleExpand", [model.path])
+            }
         }
 
         add: Transition {
-            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: theme.animItemDuration }
-            NumberAnimation { property: "scale"; from: theme.animItemScale; to: 1; duration: theme.animItemDuration }
+            ParallelAnimation {
+                NumberAnimation { property: "height"; from: 0; duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: theme.animExpandFade; easing.type: Easing.OutQuad }
+            }
         }
         remove: Transition {
-            NumberAnimation { property: "opacity"; to: 0; duration: theme.animItemDuration }
-            NumberAnimation { property: "scale"; to: theme.animItemScale; duration: theme.animItemDuration }
+            ParallelAnimation {
+                NumberAnimation { property: "height"; to: 0; duration: theme.animExpandHeight; easing.type: Easing.InCubic }
+                NumberAnimation { property: "opacity"; to: 0; duration: theme.animExpandFade; easing.type: Easing.InQuad }
+            }
         }
         displaced: Transition {
-            NumberAnimation { properties: "x,y"; duration: theme.animItemDuration; easing.type: Easing.OutCubic }
+            NumberAnimation { properties: "x,y"; duration: theme.animExpandHeight; easing.type: Easing.OutCubic }
         }
 
         Text {

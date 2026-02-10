@@ -75,6 +75,10 @@ void cuirq_start_directory_watch(const char* path) {
     cuirq::start_directory_watch(path);
 }
 
+void cuirq_watch_directories(const char* json_paths) {
+    cuirq::watch_directories(json_paths);
+}
+
 void cuirq_stop_directory_watch(void) {
     cuirq::stop_directory_watch();
 }

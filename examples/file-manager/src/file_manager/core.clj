@@ -2,97 +2,44 @@
   (:require [cuirq.core :as cuirq]
             [cuirq.state :as state]
             [cuirq.models :as models]
+            [file-manager.dirs :as dirs]
+            [file-manager.tree :as tree]
             [clojure.data.json :as json]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
-  (:import [java.io File]
-           [java.text SimpleDateFormat]
-           [java.util Date])
+  (:import [java.io File])
   (:gen-class))
 
 ;; Navigation history
 (defonce nav-history (atom {:back [] :forward []}))
 
-;; Cache last directory listing to avoid redundant updates from FSEvents
+;; Cache last flat listing to avoid redundant updates from FSEvents
 (defonce ^:private last-listing (atom nil))
 
 ;; Sort state — persists across navigation
 (defonce ^:private sort-state (atom {:field "name" :ascending true}))
 
-(defn- apply-sort!
-  "Apply current sort state to the files model."
+(defn- refresh-file-list!
+  "Rebuild the flat tree and push to model. Updates watcher paths."
   []
-  (let [{:keys [field ascending]} @sort-state]
-    (models/sort! :files field ascending)))
-
-(defn- file-type
-  "Classify file extension into a type category."
-  [^String ext]
-  (let [ext (some-> ext .toLowerCase)]
-    (cond
-      (nil? ext)                                          "other"
-      (#{"txt" "pdf" "doc" "docx" "rtf" "odt"} ext)      "document"
-      (#{"jpg" "jpeg" "png" "gif" "bmp" "svg" "webp"
-         "ico" "tiff" "heic"} ext)                        "image"
-      (#{"mp3" "wav" "flac" "aac" "ogg" "m4a" "wma"} ext) "audio"
-      (#{"mp4" "avi" "mkv" "mov" "wmv" "flv" "webm"} ext) "video"
-      (#{"clj" "cljs" "cljc" "java" "py" "js" "ts" "cpp"
-         "c" "h" "rs" "go" "rb" "sh" "html" "css" "qml"
-         "json" "xml" "yaml" "yml" "toml" "edn" "md"} ext) "code"
-      (#{"zip" "tar" "gz" "bz2" "xz" "rar" "7z"
-         "jar" "war"} ext)                                "archive"
-      :else                                               "other")))
-
-(defn- format-size
-  "Format file size in human-readable form."
-  [^long size]
-  (cond
-    (< size 1024)               (str size " B")
-    (< size (* 1024 1024))      (format "%.1f KB" (/ size 1024.0))
-    (< size (* 1024 1024 1024)) (format "%.1f MB" (/ size (* 1024.0 1024)))
-    :else                       (format "%.1f GB" (/ size (* 1024.0 1024 1024)))))
-
-(defn- extension [^String name]
-  (let [idx (.lastIndexOf name ".")]
-    (when (pos? idx)
-      (subs name (inc idx)))))
-
-(def ^:private ^SimpleDateFormat date-fmt
-  (SimpleDateFormat. "dd.MM.yyyy"))
-
-(defn- format-date [^long millis]
-  (if (pos? millis)
-    (.format date-fmt (Date. millis))
-    ""))
-
-(defn- list-directory
-  "List contents of a directory, returning a vec of maps."
-  [^String path]
-  (let [dir (File. path)
-        children (some-> (.listFiles dir) seq)]
-    (->> (or children [])
-         (filter #(not (.isHidden ^File %)))
-         (sort-by (fn [^File f]
-                    [(if (.isDirectory f) 0 1)
-                     (.toLowerCase (.getName f))]))
-         (mapv (fn [^File f]
-                 (let [name (.getName f)
-                       is-dir (.isDirectory f)
-                       ext (when-not is-dir (extension name))]
-                   (let [modified (.lastModified f)]
-                     {:name              name
-                      :path              (.getAbsolutePath f)
-                      :isDir             is-dir
-                      :size              (if is-dir "" (format-size (.length f)))
-                      :sizeBytes         (if is-dir 0 (.length f))
-                      :modified          modified
-                      :modifiedFormatted (format-date modified)
-                      :extension         (or ext "")
-                      :fileType          (if is-dir "folder" (file-type ext))
-                      :typeLabel         (if is-dir "Folder" (if ext (.toUpperCase ^String ext) ""))})))))))
+  (let [current-path (:currentPath (state/get-state))
+        items (tree/build-flat-list current-path @sort-state)
+        ;; Visible dirs = root + every expanded dir in the flat list
+        visible-dirs (into #{current-path}
+                           (comp (filter :expanded) (map :path))
+                           items)]
+    (when (not= items @last-listing)
+      (reset! last-listing items)
+      (models/update-data! :files items "path")
+      (state/update-state! assoc :itemCount (count items)))
+    ;; Prune cache and watcher to only visible directories
+    (dirs/retain-paths! visible-dirs)
+    (let [paths (dirs/active-paths)]
+      (if (seq paths)
+        (cuirq/watch-directories! paths)
+        (cuirq/stop-directory-watch!)))))
 
 (defn- build-breadcrumbs
-  "Build breadcrumb trail from a path."
   [^String path]
   (let [parts (->> (.split path (File/separator))
                    (remove empty?))]
@@ -120,11 +67,13 @@
                                (-> h
                                    (update :back conj current-path)
                                    (assoc :forward [])))))
+        ;; Reset tree state for new root
+        (tree/collapse-all!)
+        (dirs/invalidate-all!)
         ;; List directory and update model
-        (let [items (list-directory canonical)]
+        (let [items (tree/build-flat-list canonical @sort-state)]
           (reset! last-listing items)
           (models/set-data! :files items)
-          (apply-sort!)
           ;; Update state
           (state/set-state!
            {:currentPath  canonical
@@ -133,10 +82,12 @@
             :itemCount    (count items)
             :breadcrumbs  (json/write-str (build-breadcrumbs canonical))})
           ;; Watch for filesystem changes
-          (cuirq/start-directory-watch! canonical))))))
+          (let [paths (dirs/active-paths)]
+            (if (seq paths)
+              (cuirq/watch-directories! paths)
+              (cuirq/start-directory-watch! canonical))))))))
 
 (defn go-back!
-  "Navigate back in history."
   []
   (let [{:keys [back]} @nav-history]
     (when (seq back)
@@ -146,21 +97,23 @@
                              (-> h
                                  (update :back pop)
                                  (update :forward conj current))))
-        ;; Navigate without pushing to back stack
-        (let [items (list-directory prev)]
+        (tree/collapse-all!)
+        (dirs/invalidate-all!)
+        (let [items (tree/build-flat-list prev @sort-state)]
           (reset! last-listing items)
           (models/set-data! :files items)
-          (apply-sort!)
           (state/set-state!
            {:currentPath  prev
             :canGoBack    (boolean (seq (:back @nav-history)))
             :canGoForward (boolean (seq (:forward @nav-history)))
             :itemCount    (count items)
             :breadcrumbs  (json/write-str (build-breadcrumbs prev))})
-          (cuirq/start-directory-watch! prev))))))
+          (let [paths (dirs/active-paths)]
+            (if (seq paths)
+              (cuirq/watch-directories! paths)
+              (cuirq/start-directory-watch! prev))))))))
 
 (defn go-forward!
-  "Navigate forward in history."
   []
   (let [{:keys [forward]} @nav-history]
     (when (seq forward)
@@ -170,20 +123,23 @@
                              (-> h
                                  (update :forward pop)
                                  (update :back conj current))))
-        (let [items (list-directory next-path)]
+        (tree/collapse-all!)
+        (dirs/invalidate-all!)
+        (let [items (tree/build-flat-list next-path @sort-state)]
           (reset! last-listing items)
           (models/set-data! :files items)
-          (apply-sort!)
           (state/set-state!
            {:currentPath  next-path
             :canGoBack    (boolean (seq (:back @nav-history)))
             :canGoForward (boolean (seq (:forward @nav-history)))
             :itemCount    (count items)
             :breadcrumbs  (json/write-str (build-breadcrumbs next-path))})
-          (cuirq/start-directory-watch! next-path))))))
+          (let [paths (dirs/active-paths)]
+            (if (seq paths)
+              (cuirq/watch-directories! paths)
+              (cuirq/start-directory-watch! next-path))))))))
 
 (defn- resolve-sidebar-location
-  "Map sidebar location key to filesystem path."
   [^String key]
   (let [home (System/getProperty "user.home")]
     (case key
@@ -238,18 +194,23 @@
                                   path (resolve-sidebar-location (first args))]
                               (navigate-to! path))))
 
+        (cuirq/on-signal! :toggleExpand
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  path (first args)]
+                              (tree/toggle! path)
+                              ;; Invalidate cache for the toggled dir so it's re-read
+                              (when (tree/expanded? path)
+                                (dirs/invalidate! path))
+                              (refresh-file-list!))))
+
         (cuirq/on-signal! :directoryChanged
                           (fn [_ json-args]
                             (let [args (json/read-str json-args)
-                                  changed-path (first args)
-                                  current-path (:currentPath (state/get-state))]
-                              (when (= changed-path current-path)
-                                (let [items (list-directory current-path)]
-                                  (when (not= items @last-listing)
-                                    (reset! last-listing items)
-                                    (models/update-data! :files items "path")
-                                    (apply-sort!)
-                                    (state/update-state! assoc :itemCount (count items))))))))
+                                  changed-path (first args)]
+                              ;; Invalidate the changed dir and rebuild
+                              (dirs/invalidate! changed-path)
+                              (refresh-file-list!))))
 
         (cuirq/on-signal! :themeChanged
                           (fn [_ json-args]
@@ -263,9 +224,12 @@
                                   field (first args)
                                   ascending (= (second args) "true")]
                               (reset! sort-state {:field field :ascending ascending})
-                              (models/sort! :files field ascending)
-                              (state/set-state! {:sortField field
-                                                 :sortAscending ascending}))))
+                              ;; Invalidate all caches so items are re-sorted
+                              (dirs/invalidate-all!)
+                              (refresh-file-list!)
+                              (state/update-state! assoc
+                                                   :sortField field
+                                                   :sortAscending ascending))))
 
         ;; Load QML
         (println " [4/4] Loading QML...")

@@ -53,6 +53,8 @@ QtObject {
     readonly property real animViewOffset:   8     // slide distance (px)
     readonly property int animItemDuration:  200   // add/remove/displaced item transitions
     readonly property real animItemScale:    0.8   // scale-from for add, scale-to for remove
+    readonly property int animExpandHeight:  200   // tree expand/collapse height
+    readonly property int animExpandFade:    100   // tree expand/collapse opacity
 
     // Layout
     readonly property int toolbarHeight:    48
@@ -61,7 +63,7 @@ QtObject {
     readonly property int gridCellHeight:   120
     readonly property int gridPadding:      20    // left inset for grid content
     readonly property int listPadding:      8     // inset for list content
-    readonly property int listItemHeight:   40
+    readonly property int listItemHeight:   34
     readonly property int listItemSpacing:  1
     readonly property int listHeaderHeight: 28
     readonly property int statusBarHeight:  28
