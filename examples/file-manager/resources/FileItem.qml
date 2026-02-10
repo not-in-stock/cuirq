@@ -9,9 +9,9 @@ Rectangle {
     property string fileSize: ""
     property string fileType: "other"
 
-    width: 130
-    height: 140
-    radius: 10
+    width: 100
+    height: 110
+    radius: 8
     color: mouseArea.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
 
     Behavior on color { ColorAnimation { duration: theme.animHoverDuration } }
@@ -32,13 +32,13 @@ Rectangle {
     Column {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: 16
-        spacing: 8
+        anchors.topMargin: 10
+        spacing: 6
 
         Image {
             source: fileItem.iconSource(fileItem.fileType)
-            width: 48; height: 48
-            sourceSize.width: 48; sourceSize.height: 48
+            width: 40; height: 40
+            sourceSize.width: 40; sourceSize.height: 40
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
@@ -46,7 +46,7 @@ Rectangle {
             text: fileItem.fileName
             font.pixelSize: 12
             color: theme.textPrimary
-            width: 118
+            width: 90
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
             elide: Text.ElideMiddle

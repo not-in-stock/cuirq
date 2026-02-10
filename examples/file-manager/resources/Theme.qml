@@ -57,8 +57,8 @@ QtObject {
     // Layout
     readonly property int toolbarHeight:    48
     readonly property int sidebarWidth:     220
-    readonly property int gridCellWidth:    150
-    readonly property int gridCellHeight:   150
+    readonly property int gridMinCellWidth: 120
+    readonly property int gridCellHeight:   120
     readonly property int gridPadding:      20    // left inset for grid content
     readonly property int listPadding:      8     // inset for list content
     readonly property int listItemHeight:   40

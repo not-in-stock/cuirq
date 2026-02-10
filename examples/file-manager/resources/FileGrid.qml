@@ -6,24 +6,32 @@ Rectangle {
     color: theme.background
     Behavior on color { ColorAnimation { duration: theme.animDuration } }
 
+    readonly property real _availableWidth: Math.max(theme.gridMinCellWidth, gridView.width)
+    readonly property int _columns: Math.max(1, Math.floor(_availableWidth / theme.gridMinCellWidth))
+
     GridView {
         id: gridView
         anchors.fill: parent
-        topMargin: theme.toolbarHeight
+        topMargin: theme.toolbarHeight + 10
         bottomMargin: theme.statusBarHeight
-        leftMargin: theme.gridPadding
-        cellWidth: theme.gridCellWidth
+        cellWidth: fileGrid._availableWidth / fileGrid._columns
         cellHeight: theme.gridCellHeight
         clip: true
 
         model: files
 
-        delegate: FileItem {
-            fileName: model.name
-            filePath: model.path
-            isDir: model.isDir
-            fileSize: model.size
-            fileType: model.fileType
+        delegate: Item {
+            width: gridView.cellWidth
+            height: gridView.cellHeight
+
+            FileItem {
+                anchors.horizontalCenter: parent.horizontalCenter
+                fileName: model.name
+                filePath: model.path
+                isDir: model.isDir
+                fileSize: model.size
+                fileType: model.fileType
+            }
         }
 
         add: Transition {
