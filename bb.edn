@@ -73,6 +73,15 @@
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
                          "-M:run:bridge"))))}
 
+  ;; QML tooling
+  lint-qml
+  {:doc "Lint QML files for file-manager example"
+   :task (shell "qmllint -I $(dirname $(which qmlformat))/../lib/qt-6/qml examples/file-manager/resources/*.qml")}
+
+  format-qml
+  {:doc "Format QML files for file-manager example"
+   :task (shell "qmlformat -i examples/file-manager/resources/*.qml")}
+
   ;; Start nREPL server
   nrepl
   {:doc "Start nREPL server on port 7888"

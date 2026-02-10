@@ -76,6 +76,7 @@
           jq # JSON processing
           clojure-lsp # Clojure language server
           babashka # Task runner for Clojure
+          qt6.qtdeclarative # qmlformat, qmllint, qmlls
         ];
 
         # JVM setup: GraalVM 25 (Panama FFM support)

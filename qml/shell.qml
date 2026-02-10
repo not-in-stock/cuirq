@@ -18,9 +18,9 @@ ApplicationWindow {
 
         onStatusChanged: {
             if (status === Loader.Error) {
-                console.log("[Shell] ERROR loading content:", source)
+                console.log("[Shell] ERROR loading content:", source);
             } else if (status === Loader.Ready) {
-                console.log("[Shell] Content loaded:", source)
+                console.log("[Shell] Content loaded:", source);
             }
         }
     }
