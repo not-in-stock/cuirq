@@ -196,14 +196,10 @@ void QmlWatcher::reloadContent()
 
     qDebug() << "[CPP] QmlWatcher: Reloading content (proxy window)...";
 
-    // 1. Detach old root from window and destroy old engine
-    //    Must delete old engine BEFORE creating new one — Qt's global type
+    // 1. Delete old engine BEFORE creating new one — Qt's global type
     //    registry can serve cached compilations to a new engine otherwise.
-    if (g_rootItem) {
-        g_rootItem->setParentItem(nullptr);
-        delete g_rootItem;
-        g_rootItem = nullptr;
-    }
+    //    Keep old root item parented in window so it stays visible while loading.
+    QQuickItem* oldRootItem = g_rootItem;
     delete g_engine;
     g_engine = nullptr;
 
@@ -219,6 +215,7 @@ void QmlWatcher::reloadContent()
             qWarning().noquote() << err.toString();
         if (g_reloadPopup)
             g_reloadPopup->showError("Failed to load " + m_currentQmlPath);
+        // Old root item stays visible (engine gone but item still renders)
         return;
     }
 
@@ -230,11 +227,13 @@ void QmlWatcher::reloadContent()
         return;
     }
 
-    // 4. Attach new root to persistent window
+    // 4. Swap: detach old, attach new — single scene graph update
+    if (oldRootItem) oldRootItem->setParentItem(nullptr);
     newRootItem->setParentItem(g_window->contentItem());
     newRootItem->setWidth(g_window->width());
     newRootItem->setHeight(g_window->height());
     g_rootItem = newRootItem;
+    delete oldRootItem;
 
     // 5. Re-emit state so fresh QML picks up current values
     if (m_state) {

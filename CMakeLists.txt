@@ -53,7 +53,10 @@ endif()
 add_library(qmlbridge SHARED ${CUIRQ_SOURCES})
 
 if(CUIRQ_DEV_RELOAD)
-    target_compile_definitions(qmlbridge PRIVATE CUIRQ_DEV_RELOAD)
+    target_compile_definitions(qmlbridge PRIVATE
+        CUIRQ_DEV_RELOAD
+        CUIRQ_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+    )
 else()
     # Prevent AUTOMOC from generating code for dev-only Q_OBJECT classes
     set_source_files_properties(

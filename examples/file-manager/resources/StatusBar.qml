@@ -30,13 +30,6 @@ Rectangle {
         spacing: 16
 
         Text {
-            text: "🔥 HOT RELOAD!!!"
-            font.pixelSize: 12
-            color: "#E53E3E"
-            font.bold: true
-        }
-
-        Text {
             text: statusBar.itemCount + " items"
             font.pixelSize: 12
             color: Theme.textSecondary

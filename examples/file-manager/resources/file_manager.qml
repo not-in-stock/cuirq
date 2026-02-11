@@ -60,7 +60,6 @@ Item {
 
     RowLayout {
         anchors.fill: parent
-        anchors.topMargin: _cuirq_titlebar_height ? -_cuirq_titlebar_height : 0
         spacing: 0
 
         Sidebar {
