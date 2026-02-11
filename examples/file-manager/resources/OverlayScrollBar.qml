@@ -10,7 +10,7 @@ ScrollBar {
     padding: 2
 
     property bool _show: false
-    property bool _engaged: active || (parent instanceof Flickable && (orientation === Qt.Vertical ? parent.movingVertically : parent.movingHorizontally))
+    property bool _engaged: size < 1 && (active || (parent instanceof Flickable && (orientation === Qt.Vertical ? parent.movingVertically : parent.movingHorizontally)))
     property bool _windowActive: Window.window ? Window.window.active : true
 
     on_EngagedChanged: {
@@ -18,6 +18,14 @@ ScrollBar {
             hideTimer.stop();
             _show = true;
         } else {
+            hideTimer.interval = hovered ? theme.scrollbarFadeDelay : theme.scrollbarFadeDelay / 3;
+            hideTimer.restart();
+        }
+    }
+
+    onHoveredChanged: {
+        if (!hovered && !_engaged && _show) {
+            hideTimer.interval = theme.scrollbarFadeDelay / 3;
             hideTimer.restart();
         }
     }

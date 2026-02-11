@@ -23,7 +23,7 @@
 (defonce ^:private view-mode (atom "grid"))
 
 ;; Miller columns pool size
-(def ^:private miller-pool-size 8)
+(def ^:private miller-pool-size 16)
 
 ;; Miller columns state:
 ;; {:columns [{:path "/..." :name "dirname" :selected-index -1} ...]
@@ -97,7 +97,7 @@
                    (mapv (fn [col]
                            {:name (:name col)
                             :path (:path col)
-                            :selectedIndex (:selected-index col)})
+                            :selectedPath (or (:selected-path col) "")})
                          columns))]
     (state/update-state! assoc
                          :millerActiveCount active-count
@@ -113,10 +113,10 @@
       (models/update-data! (miller-model-key i) items "path"))))
 
 (defn- clear-miller-model!
-  "Clear miller column model at index i."
+  "Reset dedup cache for miller column model at index i.
+   Does NOT clear the model data — remove transitions need old content for fade-out."
   [i]
-  (swap! last-miller-data dissoc i)
-  (models/clear! (miller-model-key i)))
+  (swap! last-miller-data dissoc i))
 
 (defn miller-navigate-to!
   "Navigate to a path in Miller columns mode.
@@ -150,7 +150,7 @@
                                                 (when (= (:path item) next-path) j))
                                               items))
                                       -1)]
-                          (assoc col :selected-index idx))
+                          (assoc col :selected-index idx :selected-path next-path))
                         col))
                     columns))]
           ;; Populate models
@@ -163,6 +163,11 @@
           (let [new-state {:columns columns-with-sel :active-count active-count}]
             (reset! miller-state new-state)
             (push-miller-state! new-state))
+          ;; Update currentPath & breadcrumbs to the navigated path
+          (state/update-state! assoc
+                               :currentPath path
+                               :breadcrumbs (json/write-str (build-breadcrumbs path))
+                               :itemCount (count (dirs/list-dir! path)))
           ;; Watch visible directories
           (let [visible-dirs (set (map :path columns-with-sel))
                 paths (dirs/active-paths)
@@ -185,41 +190,49 @@
       (if (:isDir item)
         ;; Directory: open next column, clear columns beyond
         (let [next-col-idx (inc col-idx)
-              new-active (inc next-col-idx)
               item-path (:path item)]
-          (when (< next-col-idx miller-pool-size)
-            ;; Populate next column
-            (populate-miller-model! next-col-idx item-path)
-            ;; Clear columns beyond
-            (doseq [i (range new-active miller-pool-size)]
-              (clear-miller-model! i))
-            ;; Update miller state
-            (let [;; Keep columns up to col-idx, update selected-index
-                  kept (subvec columns 0 (inc col-idx))
-                  kept (assoc-in kept [col-idx :selected-index] item-index)
-                  ;; Add new column
-                  new-col {:path item-path
-                           :name (.getName (File. ^String item-path))
-                           :selected-index -1}
-                  new-columns (conj kept new-col)
-                  new-state {:columns new-columns :active-count new-active}]
-              (reset! miller-state new-state)
-              (push-miller-state! new-state)
-              ;; Update currentPath & breadcrumbs to the deepest directory
-              (state/update-state! assoc
-                                   :currentPath item-path
-                                   :breadcrumbs (json/write-str (build-breadcrumbs item-path))
-                                   :itemCount (count (dirs/list-dir! item-path)))
-              ;; Update watcher
-              (let [visible-dirs (set (map :path new-columns))]
-                (dirs/retain-paths! visible-dirs)
-                (cuirq/watch-directories! (vec visible-dirs))))))
+          (if (>= next-col-idx miller-pool-size)
+            ;; Pool exhausted — slide window via full navigate
+            (miller-navigate-to! item-path)
+            ;; Room in pool — populate in place
+            (let [new-active (inc next-col-idx)]
+              ;; Populate next column
+              (populate-miller-model! next-col-idx item-path)
+              ;; Clear columns beyond
+              (doseq [i (range new-active miller-pool-size)]
+                (clear-miller-model! i))
+              ;; Update miller state
+              (let [;; Keep columns up to col-idx, update selected-index
+                    kept (subvec columns 0 (inc col-idx))
+                    kept (-> kept
+                             (assoc-in [col-idx :selected-index] item-index)
+                             (assoc-in [col-idx :selected-path] item-path))
+                    ;; Add new column
+                    new-col {:path item-path
+                             :name (.getName (File. ^String item-path))
+                             :selected-index -1
+                             :selected-path ""}
+                    new-columns (conj kept new-col)
+                    new-state {:columns new-columns :active-count new-active}]
+                (reset! miller-state new-state)
+                (push-miller-state! new-state)
+                ;; Update currentPath & breadcrumbs to the deepest directory
+                (state/update-state! assoc
+                                     :currentPath item-path
+                                     :breadcrumbs (json/write-str (build-breadcrumbs item-path))
+                                     :itemCount (count (dirs/list-dir! item-path)))
+                ;; Update watcher
+                (let [visible-dirs (set (map :path new-columns))]
+                  (dirs/retain-paths! visible-dirs)
+                  (cuirq/watch-directories! (vec visible-dirs)))))))
         ;; File: just update selection, clear columns right of current
         (let [new-active (inc col-idx)]
           (doseq [i (range new-active miller-pool-size)]
             (clear-miller-model! i))
           (let [kept (subvec columns 0 (inc col-idx))
-                kept (assoc-in kept [col-idx :selected-index] item-index)
+                kept (-> kept
+                         (assoc-in [col-idx :selected-index] item-index)
+                         (assoc-in [col-idx :selected-path] (:path item)))
                 new-state {:columns kept :active-count new-active}]
             (reset! miller-state new-state)
             (push-miller-state! new-state)))))))

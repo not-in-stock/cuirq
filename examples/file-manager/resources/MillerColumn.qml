@@ -8,7 +8,9 @@ Rectangle {
     property int columnIndex: 0
     property string columnPath: ""
     property string columnName: ""
-    property int selectedIndex: -1
+    property string selectedChildPath: ""
+
+    onColumnPathChanged: listView.contentY = -listView.topMargin
 
     width: theme.millerColumnWidth
     color: "transparent"
@@ -55,17 +57,21 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         clip: true
+        topMargin: theme.toolbarHeight
+        displayMarginBeginning: theme.toolbarHeight
 
         model: root.columnModel
 
-        ScrollBar.vertical: OverlayScrollBar {}
+        ScrollBar.vertical: OverlayScrollBar {
+            topPadding: theme.toolbarHeight
+        }
 
         delegate: Rectangle {
             id: delegateItem
             width: listView.width
             height: theme.millerItemHeight
 
-            readonly property bool isSelected: index === root.selectedIndex
+            readonly property bool isSelected: model.path === root.selectedChildPath
             readonly property bool isHovered: delegateMouse.containsMouse
 
             color: isSelected ? theme.millerSelection : (isHovered ? theme.surfaceHover : theme.surfaceHoverOff)
