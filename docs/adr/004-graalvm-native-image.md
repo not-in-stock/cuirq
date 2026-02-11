@@ -64,15 +64,10 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Action**:
 - Mark both classes `--initialize-at-run-time=qml.PanamaBridge,qml.QtThread` in native-image config
-- Alternatively, use lazy holder pattern:
-  ```java
-  private static class Handles {
-      static final MethodHandle INITIALIZE = downcall(...);
-      // ...
-  }
-  ```
-  with `--initialize-at-run-time=qml.PanamaBridge$Handles`
 - `System.loadLibrary("qmlbridge")` must also happen at runtime (already the case since it's in `static {}`)
+- No lazy holder pattern needed — `--initialize-at-run-time` on the class itself is sufficient
+
+**Validated by spike**: `--initialize-at-run-time=spike.Bridge` confirmed working — static init with `System.loadLibrary` + `SymbolLookup.loaderLookup()` + `Arena.ofAuto()` all deferred correctly.
 
 **Complexity**: Low
 **Priority**: Blocker
@@ -82,11 +77,13 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 **Problem**: GraalVM native-image needs to know all `FunctionDescriptor` signatures at build time to generate the supporting code for downcalls and upcalls.
 
 **Action**:
-- Use the GraalVM Tracing Agent: run the application on standard JVM with `-agentlib:native-image-agent=config-output-dir=native-config/` to auto-generate `reachability-metadata.json` with all FFM descriptors
-- Commit the generated config to `native-config/` (or `META-INF/native-image/`)
+- Use the GraalVM Tracing Agent: run the application on standard JVM with `-agentlib:native-image-agent=config-output-dir=native-config/` to auto-generate config with all FFM descriptors
+- Commit the generated config to `native-config/` and pass `-H:ConfigurationFileDirectories=native-config` to native-image
 - Verify upcall stubs (signal callback in `PanamaBridge`, task callback in `QtThread`) are captured
 
-**Complexity**: Medium — agent may miss code paths, manual review needed
+**Validated by spike**: Tracing agent automatically captured 2 downcalls + 1 upcall from a single run. No manual descriptor registration needed.
+
+**Complexity**: Low (downgraded from Medium — agent works reliably)
 **Priority**: Blocker
 
 ### 4. Add reflection configuration for Clojure runtime
@@ -94,11 +91,13 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 **Problem**: Clojure itself uses reflection for protocol dispatch, multimethod resolution, and `defrecord`/`deftype` interop. `clojure.data.json` uses `extend-type` with protocol dispatch.
 
 **Action**:
-- Start with community-maintained configs from [clj-easy/graal-config](https://github.com/clj-easy/graal-config)
-- Supplement with Tracing Agent output from a full application run
+- Use `com.github.clj-easy/graal-build-time` library with `--features=clj_easy.graal_build_time.InitClojureClasses` — automatically registers all Clojure packages for build-time initialization
+- Supplement with Tracing Agent output for reflection metadata
 - Add `(set! *warn-on-reflection* true)` in all source files (currently missing from example namespaces: `dirs.clj`, `tree.clj`, `file-manager/core.clj`)
 
-**Complexity**: Medium — iterative process, may require multiple agent runs
+**Validated by spike**: `graal-build-time` auto-detected and registered packages `clojure`, `clj_easy.graal_build_time`, `spike` for build-time init. No manual `graal-config` or `--initialize-at-build-time` listing needed.
+
+**Complexity**: Low (downgraded from Medium — graal-build-time automates this)
 **Priority**: Blocker
 
 ### 5. AOT-compile all Clojure namespaces
@@ -121,29 +120,40 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
   native-image \
     --no-fallback \
     -H:+ForeignAPISupport \
+    -H:+UnlockExperimentalVMOptions \
+    --enable-native-access=ALL-UNNAMED \
+    --features=clj_easy.graal_build_time.InitClojureClasses \
     --initialize-at-run-time=qml.PanamaBridge,qml.QtThread \
     -H:ConfigurationFileDirectories=native-config/ \
     -Djava.library.path=build/lib \
     -o cuirq-file-manager \
     file_manager.core
   ```
-- Handle macOS-specific: `-XstartOnFirstThread` equivalent (native-image may need `-R:+StartOnFirstThread` or similar; needs investigation)
+- Handle macOS-specific: `-XstartOnFirstThread` equivalent (needs investigation)
 - Bundle `libqmlbridge.dylib` alongside the binary
 
 **Complexity**: Medium — platform-specific issues expected
 **Priority**: Blocker
 
-### 7. Spike: minimal Panama + Clojure native-image
+### 7. Spike: minimal Panama + Clojure native-image [Works]
 
-**Action**: Before tackling the full application, build a minimal proof-of-concept:
-- Single Clojure namespace with one Panama downcall (e.g., `cuirq_initialize` + `cuirq_shutdown`)
-- Compile to native-image
-- Verify it runs
+**Status**: Complete — see `spike/native-image/`
 
-This validates the Clojure AOT + Panama FFM + GraalVM triple before investing in full migration.
+Built a standalone spike with a tiny C library (not Qt) to isolate Panama/GraalVM concerns:
+- `spike_add(int, int)` — downcall with return value
+- `spike_invoke(callback, ctx)` — upcall trampoline with `ConcurrentHashMap<Long, Runnable>` task map
+- Clojure `gen-class` entry point calling both
 
-**Complexity**: Low
-**Priority**: High — do first to de-risk the approach
+**Results**:
+- JVM run: all tests pass
+- Native binary (21.5 MB, built in ~50s): identical output, all tests pass
+- Tracing agent auto-captured 2 downcalls + 1 upcall
+- `graal-build-time` auto-registered all Clojure packages for build-time init
+- `--initialize-at-run-time` correctly defers `System.loadLibrary` + `SymbolLookup.loaderLookup()` + `Arena.ofAuto()`
+
+**Key dependencies for native-image build**:
+- `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}`
+- `-H:+ForeignAPISupport -H:+UnlockExperimentalVMOptions --enable-native-access=ALL-UNNAMED`
 
 ## Consequences
 
@@ -161,10 +171,10 @@ This validates the Clojure AOT + Panama FFM + GraalVM triple before investing in
 - Debugging native binaries is harder than JVM
 
 ### Risks
-- **Clojure + Panama + GraalVM** is an uncommon combination — limited community experience
+- ~~**Clojure + Panama + GraalVM** is an uncommon combination — limited community experience~~ **De-risked by spike**: the triple works, tooling (`graal-build-time`, tracing agent) handles most complexity
 - macOS `-XstartOnFirstThread` behavior in native-image is uncharted
 - Qt's own thread model interacting with SubstrateVM's thread implementation — potential surprises
-- `clojure.data.json` or other transitive deps may have hidden reflection that's hard to track down
+- `clojure.data.json` or other transitive deps may have hidden reflection — tracing agent should capture this but may need multiple exercise runs
 
 ## References
 
