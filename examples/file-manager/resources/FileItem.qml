@@ -12,11 +12,11 @@ Rectangle {
     width: 100
     height: 110
     radius: 8
-    color: mouseArea.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+    color: mouseArea.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
     Behavior on color {
         ColorAnimation {
-            duration: theme.animHoverDuration
+            duration: Theme.animHoverDuration
         }
     }
 
@@ -59,7 +59,7 @@ Rectangle {
         Text {
             text: fileItem.fileName
             font.pixelSize: 12
-            color: theme.textPrimary
+            color: Theme.textPrimary
             width: 90
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
@@ -71,7 +71,7 @@ Rectangle {
         Text {
             text: fileItem.fileSize
             font.pixelSize: 11
-            color: theme.textTertiary
+            color: Theme.textTertiary
             anchors.horizontalCenter: parent.horizontalCenter
             visible: !fileItem.isDir
         }

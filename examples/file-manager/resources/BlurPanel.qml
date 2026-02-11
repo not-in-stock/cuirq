@@ -5,8 +5,8 @@ Item {
     id: root
 
     required property Item sourceItem
-    property color overlayColor: theme.panelOverlay
-    property int blurRadius: theme.panelBlurRadius
+    property color overlayColor: Theme.panelOverlay
+    property int blurRadius: Theme.panelBlurRadius
 
     clip: true
 
@@ -33,7 +33,7 @@ Item {
         color: root.overlayColor
         Behavior on color {
             ColorAnimation {
-                duration: theme.animDuration
+                duration: Theme.animDuration
             }
         }
     }

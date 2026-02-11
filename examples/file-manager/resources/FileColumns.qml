@@ -3,10 +3,10 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileColumns
-    color: theme.background
+    color: Theme.background
     Behavior on color {
         ColorAnimation {
-            duration: theme.animDuration
+            duration: Theme.animDuration
         }
     }
 
@@ -25,7 +25,7 @@ Rectangle {
     ListView {
         id: columnsListView
         width: parent.width
-        height: parent.height - theme.statusBarHeight
+        height: parent.height - Theme.statusBarHeight
         orientation: ListView.Horizontal
         model: columnsListModel
         clip: true
@@ -55,14 +55,14 @@ Rectangle {
                     property: "opacity"
                     from: 0
                     to: 1
-                    duration: theme.animViewDuration
+                    duration: Theme.animViewDuration
                     easing.type: Easing.OutQuad
                 }
                 NumberAnimation {
                     property: "scale"
                     from: 0.92
                     to: 1
-                    duration: theme.animViewDuration
+                    duration: Theme.animViewDuration
                     easing.type: Easing.OutQuad
                 }
             }
@@ -72,7 +72,7 @@ Rectangle {
             id: scrollAnim
             target: columnsListView
             property: "contentX"
-            duration: theme.animViewDuration
+            duration: Theme.animViewDuration
             easing.type: Easing.OutQuad
             onFinished: {
                 // Remove deferred columns — they're now off-screen
@@ -100,7 +100,7 @@ Rectangle {
             for (let i = newInfo.length; i < oldCount; i++)
                 columnsListModel.setProperty(i, "selectedPath", "");
 
-            let target = Math.max(0, newInfo.length * theme.millerColumnWidth - columnsListView.width);
+            let target = Math.max(0, newInfo.length * Theme.millerColumnWidth - columnsListView.width);
             if (target !== columnsListView.contentX) {
                 // Animate scroll — columns slide off-screen, then get removed
                 _pendingRemoves = oldCount - newInfo.length;
@@ -129,7 +129,7 @@ Rectangle {
             for (let i = oldCount; i < newInfo.length; i++)
                 columnsListModel.append(newInfo[i]);
 
-            let target = Math.max(0, newInfo.length * theme.millerColumnWidth - columnsListView.width);
+            let target = Math.max(0, newInfo.length * Theme.millerColumnWidth - columnsListView.width);
             if (target !== columnsListView.contentX) {
                 scrollAnim.from = columnsListView.contentX;
                 scrollAnim.to = target;
@@ -143,7 +143,7 @@ Rectangle {
         anchors.centerIn: parent
         text: "This folder is empty"
         font.pixelSize: 16
-        color: theme.textSecondary
+        color: Theme.textSecondary
         visible: columnsListModel.count === 0
     }
 }

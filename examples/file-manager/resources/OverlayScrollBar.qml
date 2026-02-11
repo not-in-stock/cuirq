@@ -18,14 +18,14 @@ ScrollBar {
             hideTimer.stop();
             _show = true;
         } else {
-            hideTimer.interval = hovered ? theme.scrollbarFadeDelay : theme.scrollbarFadeDelay / 3;
+            hideTimer.interval = hovered ? Theme.scrollbarFadeDelay : Theme.scrollbarFadeDelay / 3;
             hideTimer.restart();
         }
     }
 
     onHoveredChanged: {
         if (!hovered && !_engaged && _show) {
-            hideTimer.interval = theme.scrollbarFadeDelay / 3;
+            hideTimer.interval = Theme.scrollbarFadeDelay / 3;
             hideTimer.restart();
         }
     }
@@ -39,19 +39,19 @@ ScrollBar {
 
     Timer {
         id: hideTimer
-        interval: theme.scrollbarFadeDelay
+        interval: Theme.scrollbarFadeDelay
         onTriggered: root._show = false
     }
 
     contentItem: Rectangle {
-        implicitWidth: theme.scrollbarWidth
-        radius: theme.scrollbarRadius
-        color: theme.scrollbarColor
+        implicitWidth: Theme.scrollbarWidth
+        radius: Theme.scrollbarRadius
+        color: Theme.scrollbarColor
         opacity: root._show ? 1 : 0
 
         Behavior on opacity {
             NumberAnimation {
-                duration: theme.scrollbarFadeDuration
+                duration: Theme.scrollbarFadeDuration
             }
         }
     }

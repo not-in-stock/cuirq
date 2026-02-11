@@ -21,11 +21,11 @@ Rectangle {
             "music": _home + "/Music"
         })
 
-    width: theme.sidebarWidth
-    color: theme.sidebarBackground
+    width: Theme.sidebarWidth
+    color: Theme.sidebarBackground
     Behavior on color {
         ColorAnimation {
-            duration: theme.animDuration
+            duration: Theme.animDuration
         }
     }
 
@@ -35,10 +35,10 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: theme.separator
+        color: Theme.separator
         Behavior on color {
             ColorAnimation {
-                duration: theme.animDuration
+                duration: Theme.animDuration
             }
         }
     }
@@ -57,7 +57,7 @@ Rectangle {
             font.pixelSize: 11
             font.bold: true
             font.letterSpacing: 0.5
-            color: theme.textTertiary
+            color: Theme.textTertiary
             Layout.leftMargin: 10
             Layout.bottomMargin: 6
         }
@@ -107,16 +107,16 @@ Rectangle {
                 Layout.fillWidth: true
                 height: 36
                 radius: 8
-                color: isActive || sidebarMouse.containsMouse ? theme.sidebarActive : theme.sidebarActiveOff
+                color: isActive || sidebarMouse.containsMouse ? Theme.sidebarActive : Theme.sidebarActiveOff
 
                 Behavior on color {
                     ColorAnimation {
-                        duration: theme.animHoverDuration
+                        duration: Theme.animHoverDuration
                     }
                 }
                 Behavior on border.color {
                     ColorAnimation {
-                        duration: theme.animHoverDuration
+                        duration: Theme.animHoverDuration
                     }
                 }
 
@@ -138,7 +138,7 @@ Rectangle {
                     Text {
                         text: label
                         font.pixelSize: 13
-                        color: theme.textPrimary
+                        color: Theme.textPrimary
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }

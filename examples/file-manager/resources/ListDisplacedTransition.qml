@@ -3,7 +3,7 @@ import QtQuick
 Transition {
     NumberAnimation {
         properties: "x,y"
-        duration: theme.animExpandHeight
+        duration: Theme.animExpandHeight
         easing.type: Easing.OutCubic
     }
 }

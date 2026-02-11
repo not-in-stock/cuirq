@@ -3,10 +3,10 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileList
-    color: theme.background
+    color: Theme.background
     Behavior on color {
         ColorAnimation {
-            duration: theme.animDuration
+            duration: Theme.animDuration
         }
     }
 
@@ -51,17 +51,17 @@ Rectangle {
 
     ListView {
         id: listView
-        y: theme.toolbarHeight + theme.listHeaderHeight
+        y: Theme.toolbarHeight + Theme.listHeaderHeight
         width: parent.width
-        height: parent.height - theme.toolbarHeight - theme.listHeaderHeight - theme.statusBarHeight
-        topMargin: theme.listPadding
-        bottomMargin: theme.listPadding
-        leftMargin: theme.listPadding
-        rightMargin: theme.listPadding
+        height: parent.height - Theme.toolbarHeight - Theme.listHeaderHeight - Theme.statusBarHeight
+        topMargin: Theme.listPadding
+        bottomMargin: Theme.listPadding
+        leftMargin: Theme.listPadding
+        rightMargin: Theme.listPadding
         clip: false
-        displayMarginBeginning: theme.toolbarHeight + theme.listHeaderHeight
-        displayMarginEnd: theme.statusBarHeight
-        spacing: theme.listItemSpacing
+        displayMarginBeginning: Theme.toolbarHeight + Theme.listHeaderHeight
+        displayMarginEnd: Theme.statusBarHeight
+        spacing: Theme.listItemSpacing
         ScrollBar.vertical: OverlayScrollBar {}
         MouseWheelBooster {
             flickable: listView
@@ -72,14 +72,14 @@ Rectangle {
         delegate: Rectangle {
             id: listItem
             width: listView.width - listView.leftMargin - listView.rightMargin
-            height: theme.listItemHeight
+            height: Theme.listItemHeight
             radius: 6
             clip: true
-            color: listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+            color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Behavior on color {
                 ColorAnimation {
-                    duration: theme.animHoverDuration
+                    duration: Theme.animHoverDuration
                 }
             }
 
@@ -119,7 +119,7 @@ Rectangle {
                         rotation: model.expanded ? 90 : 0
                         Behavior on rotation {
                             NumberAnimation {
-                                duration: theme.animExpandHeight
+                                duration: Theme.animExpandHeight
                                 easing.type: Easing.OutCubic
                             }
                         }
@@ -154,7 +154,7 @@ Rectangle {
                 Text {
                     text: model.name
                     font.pixelSize: 13
-                    color: theme.textPrimary
+                    color: Theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - listItem.indentWidth - fileList.arrowWidth - fileList.arrowSpacing - fileList.iconSize - fileList.iconPaddingRight * 2
@@ -169,7 +169,7 @@ Rectangle {
                 leftPadding: 12
                 text: model.isDir ? "" : model.size
                 font.pixelSize: 12
-                color: theme.textTertiary
+                color: Theme.textTertiary
             }
 
             // Date column
@@ -180,7 +180,7 @@ Rectangle {
                 leftPadding: 12
                 text: model.modifiedFormatted
                 font.pixelSize: 12
-                color: theme.textTertiary
+                color: Theme.textTertiary
             }
 
             // Type column
@@ -191,7 +191,7 @@ Rectangle {
                 leftPadding: 12
                 text: model.typeLabel
                 font.pixelSize: 12
-                color: theme.textTertiary
+                color: Theme.textTertiary
                 elide: Text.ElideRight
             }
 
@@ -224,7 +224,7 @@ Rectangle {
             anchors.centerIn: parent
             text: "This folder is empty"
             font.pixelSize: 16
-            color: theme.textSecondary
+            color: Theme.textSecondary
             visible: listView.count === 0
         }
     }

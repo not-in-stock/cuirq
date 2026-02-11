@@ -257,8 +257,6 @@
     ;; 7. App QML files
     (fs/create-dirs qml-dir)
     (fs/create-dirs (str res-dir "/resources"))
-    (println "  QML: shell.qml")
-    (fs/copy (str project-root "/qml/shell.qml") (str qml-dir "/shell.qml") {:replace-existing true})
     (let [example-qml-dir (str project-root "/examples/" example "/resources")]
       (doseq [f (fs/list-dir example-qml-dir)]
         (let [fname (str (fs/file-name f))]

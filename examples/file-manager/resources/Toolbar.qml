@@ -12,7 +12,7 @@ Rectangle {
     signal viewModeRequested(string mode)
     signal themeCycled
 
-    height: theme.toolbarHeight
+    height: Theme.toolbarHeight
     color: "transparent"
 
     MouseArea {
@@ -25,10 +25,10 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         height: 1
-        color: theme.separator
+        color: Theme.separator
         Behavior on color {
             ColorAnimation {
-                duration: theme.animDuration
+                duration: Theme.animDuration
             }
         }
     }
@@ -44,7 +44,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: backMouse.containsMouse && toolbar.canGoBack ? theme.surfaceHover : theme.surfaceHoverOff
+            color: backMouse.containsMouse && toolbar.canGoBack ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Image {
                 anchors.centerIn: parent
@@ -73,7 +73,7 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: fwdMouse.containsMouse && toolbar.canGoForward ? theme.surfaceHover : theme.surfaceHoverOff
+            color: fwdMouse.containsMouse && toolbar.canGoForward ? Theme.surfaceHover : Theme.surfaceHoverOff
 
             Image {
                 anchors.centerIn: parent
@@ -114,7 +114,7 @@ Rectangle {
                     Text {
                         text: "/"
                         font.pixelSize: 14
-                        color: theme.textSeparator
+                        color: Theme.textSeparator
                         anchors.verticalCenter: parent.verticalCenter
                         visible: index > 0
                     }
@@ -124,7 +124,7 @@ Rectangle {
                         height: 28
                         radius: 6
                         anchors.verticalCenter: parent.verticalCenter
-                        color: crumbMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+                        color: crumbMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
 
                         Text {
                             id: crumbText
@@ -132,7 +132,7 @@ Rectangle {
                             text: toolbar.breadcrumbs[index].name
                             font.pixelSize: 13
                             font.bold: index === toolbar.breadcrumbs.length - 1
-                            color: index === toolbar.breadcrumbs.length - 1 ? theme.textHeading : theme.textSecondary
+                            color: index === toolbar.breadcrumbs.length - 1 ? Theme.textHeading : Theme.textSecondary
                         }
 
                         MouseArea {
@@ -151,12 +151,12 @@ Rectangle {
         Rectangle {
             width: 1
             height: 24
-            color: theme.border
+            color: Theme.border
             Layout.leftMargin: 4
             Layout.rightMargin: 4
             Behavior on color {
                 ColorAnimation {
-                    duration: theme.animDuration
+                    duration: Theme.animDuration
                 }
             }
         }
@@ -169,7 +169,7 @@ Rectangle {
                 width: 32
                 height: 32
                 radius: 6
-                color: toolbar.viewMode === "grid" ? theme.surfaceActive : (gridMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+                color: toolbar.viewMode === "grid" ? Theme.surfaceActive : (gridMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
@@ -194,7 +194,7 @@ Rectangle {
                 width: 32
                 height: 32
                 radius: 6
-                color: toolbar.viewMode === "list" ? theme.surfaceActive : (listMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+                color: toolbar.viewMode === "list" ? Theme.surfaceActive : (listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
@@ -219,7 +219,7 @@ Rectangle {
                 width: 32
                 height: 32
                 radius: 6
-                color: toolbar.viewMode === "columns" ? theme.surfaceActive : (colsMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff)
+                color: toolbar.viewMode === "columns" ? Theme.surfaceActive : (colsMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
                 Image {
                     anchors.centerIn: parent
@@ -246,12 +246,12 @@ Rectangle {
             width: 32
             height: 32
             radius: 6
-            color: themeMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+            color: themeMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
             Layout.leftMargin: 4
 
             Image {
                 anchors.centerIn: parent
-                source: theme.themeMode === "light" ? "icons/sun.svg" : theme.themeMode === "dark" ? "icons/moon.svg" : "icons/system-theme.svg"
+                source: Theme.themeMode === "light" ? "icons/sun.svg" : Theme.themeMode === "dark" ? "icons/moon.svg" : "icons/system-Theme.svg"
                 width: 18
                 height: 18
                 sourceSize.width: 18

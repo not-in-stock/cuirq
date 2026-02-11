@@ -17,8 +17,12 @@ add_compile_options(
     -Werror=return-type
 )
 
+# Dev-only hot-reload support (disable for production bundles)
+option(CUIRQ_DEV_RELOAD "Enable QML hot-reload (dev only)" ON)
+
 # Enable automatic Qt MOC (Meta-Object Compiler)
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 
 # Find Qt6 components
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Svg)
@@ -27,10 +31,19 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Qml Quick QuickControls2 Svg)
 set(CUIRQ_SOURCES
     cpp/qt_engine.cpp
     cpp/jvmlistmodel.cpp
-    cpp/qmlwatcher.cpp
     cpp/stateobject.cpp
     cpp/panama_api.cpp
 )
+
+# Dev-only sources
+if(CUIRQ_DEV_RELOAD)
+    list(APPEND CUIRQ_SOURCES
+        cpp/qmlwatcher.cpp
+        cpp/reload_popup.cpp
+        cpp/reload_popup.qrc
+    )
+endif()
+
 if(APPLE)
     list(APPEND CUIRQ_SOURCES cpp/macos_utils.mm cpp/fs_watcher_macos.mm)
 else()
@@ -38,6 +51,17 @@ else()
 endif()
 
 add_library(qmlbridge SHARED ${CUIRQ_SOURCES})
+
+if(CUIRQ_DEV_RELOAD)
+    target_compile_definitions(qmlbridge PRIVATE CUIRQ_DEV_RELOAD)
+else()
+    # Prevent AUTOMOC from generating code for dev-only Q_OBJECT classes
+    set_source_files_properties(
+        cpp/qmlwatcher.h
+        cpp/reload_popup.h
+        PROPERTIES SKIP_AUTOMOC ON
+    )
+endif()
 
 # Include directories
 target_include_directories(qmlbridge PRIVATE
@@ -68,5 +92,6 @@ message(STATUS "=== cuirq Bridge Build Configuration ===")
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 message(STATUS "C++ standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Qt6 version: ${Qt6_VERSION}")
+message(STATUS "Dev reload: ${CUIRQ_DEV_RELOAD}")
 message(STATUS "Library output: ${CMAKE_BINARY_DIR}/lib")
 message(STATUS "========================================")

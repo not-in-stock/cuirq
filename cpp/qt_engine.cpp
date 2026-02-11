@@ -1,10 +1,14 @@
 #include "qt_engine.h"
 #include "stateobject.h"
 #include "jvmlistmodel.h"
+#ifdef CUIRQ_DEV_RELOAD
 #include "qmlwatcher.h"
+#include "reload_popup.h"
+#endif
 
 #include <QGuiApplication>
-#include <QQmlApplicationEngine>
+#include <QQmlEngine>
+#include <QQmlComponent>
 #include <QQmlContext>
 #include <QString>
 #include <QQuickStyle>
@@ -17,11 +21,12 @@
 #include <QTimer>
 #include <QThread>
 #include <QQuickWindow>
+#include <QQuickItem>
 #include <QJsonDocument>
 #include <QJsonArray>
+#include <QQmlError>
 #include <iostream>
 #include <vector>
-#include <dlfcn.h>
 
 #include "fs_watcher.h"
 #ifdef Q_OS_MACOS
@@ -75,40 +80,55 @@ private:
 
 // Global state for Qt objects
 static QGuiApplication* g_app = nullptr;
-static QQmlApplicationEngine* g_engine = nullptr;
+QQuickWindow* g_window = nullptr;             // non-static: accessed by qmlwatcher.cpp
+QQuickItem* g_rootItem = nullptr;             // non-static: accessed by qmlwatcher.cpp
+QQmlEngine* g_engine = nullptr;               // non-static: accessed by qmlwatcher.cpp
 static PanamaSignalForwarder* g_signalForwarder = nullptr;
+#ifdef CUIRQ_DEV_RELOAD
 static QmlWatcher* g_qmlWatcher = nullptr;
+ReloadPopup* g_reloadPopup = nullptr;        // non-static: accessed by qmlwatcher.cpp
+#endif
 static StateNotifier* g_stateNotifier = nullptr;
 static StateObject* g_state = nullptr;
 static QHash<QString, JvmListModel*> g_models;
 static DirectoryWatcher* g_directoryWatcher = nullptr;
-static bool g_shellLoaded = false;
 static QString g_contentUrl;
+
+// Titlebar height — remembered so new engines get the correct value
+static int g_titlebarHeight = 0;
 
 // Command-line arguments storage (must persist for QGuiApplication lifetime)
 static std::vector<char*> g_argv_storage;
 static int g_argc = 0;
 
-// Find shell.qml relative to libqmlbridge
-static QString findShellQmlPath() {
-    Dl_info info;
-    if (dladdr(reinterpret_cast<void*>(cuirq::initialize), &info) && info.dli_fname) {
-        QFileInfo libFile(QString::fromUtf8(info.dli_fname));
+// Create (or recreate) the QML engine with all context properties.
+// Long-lived objects are parented to g_app and survive engine destruction.
+// Non-static: called by qmlwatcher.cpp during reload.
+void setupEngine() {
+    g_engine = new QQmlEngine();
 
-        // macOS .app bundle: Frameworks/../Resources/qml/shell.qml
-        QString bundlePath = QDir(libFile.absolutePath() + "/../Resources/qml").absoluteFilePath("shell.qml");
-        if (QFileInfo::exists(bundlePath)) {
-            return bundlePath;
+    // QML error interception
+    g_engine->setOutputWarningsToStandardError(false);
+    QObject::connect(g_engine, &QQmlEngine::warnings, [](const QList<QQmlError>& warnings) {
+        for (const auto& error : warnings) {
+            auto msg = QString("%1:%2:%3: %4")
+                .arg(error.url().toLocalFile())
+                .arg(error.line()).arg(error.column())
+                .arg(error.description());
+            qWarning().noquote() << msg;
+#ifdef CUIRQ_DEV_RELOAD
+            if (g_reloadPopup) g_reloadPopup->appendWarning(msg);
+#endif
         }
+    });
 
-        // Development: build/lib/../../qml/shell.qml
-        QString projectRoot = libFile.absolutePath() + "/../..";
-        QString shellPath = QDir(projectRoot).absoluteFilePath("qml/shell.qml");
-        if (QFileInfo::exists(shellPath)) {
-            return shellPath;
-        }
-    }
-    return {};
+    auto* ctx = g_engine->rootContext();
+    ctx->setContextProperty("signalForwarder", g_signalForwarder);
+    ctx->setContextProperty("state", g_state);
+    ctx->setContextProperty("stateNotifier", g_stateNotifier);
+    ctx->setContextProperty("_cuirq_titlebar_height", g_titlebarHeight);
+    for (auto it = g_models.begin(); it != g_models.end(); ++it)
+        ctx->setContextProperty(it.key(), it.value());
 }
 
 namespace cuirq {
@@ -131,35 +151,31 @@ bool initialize(int argc, char* argv[]) {
     g_app = new QGuiApplication(g_argc, g_argv_storage.data());
     std::cout << "[CPP] QGuiApplication created" << std::endl;
 
-    g_engine = new QQmlApplicationEngine();
-    std::cout << "[CPP] QQmlApplicationEngine created" << std::endl;
+    // Long-lived objects — parented to g_app so they survive engine recreation
+    g_signalForwarder = new PanamaSignalForwarder(g_app);
+    std::cout << "[CPP] PanamaSignalForwarder created" << std::endl;
 
-    // Signal forwarder (Panama-style: function pointer callback)
-    g_signalForwarder = new PanamaSignalForwarder();
-    g_engine->rootContext()->setContextProperty("signalForwarder", g_signalForwarder);
-    std::cout << "[CPP] PanamaSignalForwarder exposed to QML" << std::endl;
-
-    // Hot-reload watcher
-    g_qmlWatcher = new QmlWatcher(g_engine, g_engine);
-    std::cout << "[CPP] QmlWatcher created (hot-reload enabled)" << std::endl;
-
-    // Directory watcher (FSEvents on macOS, QFileSystemWatcher on Linux)
-    g_directoryWatcher = new DirectoryWatcher(g_engine);
+    g_directoryWatcher = new DirectoryWatcher(g_app);
 #ifdef Q_OS_MACOS
     std::cout << "[CPP] DirectoryWatcher created (FSEvents)" << std::endl;
 #else
     std::cout << "[CPP] DirectoryWatcher created (QFileSystemWatcher)" << std::endl;
 #endif
 
-    // Reactive state + notifier (plain QObject so QML can see its signals)
-    g_stateNotifier = new StateNotifier(g_engine);
-    g_state = new StateObject(g_stateNotifier, g_engine);
-    g_engine->rootContext()->setContextProperty("state", g_state);
-    g_engine->rootContext()->setContextProperty("stateNotifier", g_stateNotifier);
-    if (g_qmlWatcher) {
-        g_qmlWatcher->setStateObject(g_state);
-    }
-    std::cout << "[CPP] StateObject + StateNotifier exposed to QML" << std::endl;
+    g_stateNotifier = new StateNotifier(g_app);
+    g_state = new StateObject(g_stateNotifier, g_app);
+    std::cout << "[CPP] StateObject + StateNotifier created" << std::endl;
+
+#ifdef CUIRQ_DEV_RELOAD
+    g_qmlWatcher = new QmlWatcher(g_app);
+    g_qmlWatcher->setStateObject(g_state);
+    g_reloadPopup = new ReloadPopup(g_app);
+    std::cout << "[CPP] QmlWatcher + ReloadPopup created (hot-reload enabled)" << std::endl;
+#endif
+
+    // Create the first engine instance
+    setupEngine();
+    std::cout << "[CPP] QQmlEngine created" << std::endl;
 
     return true;
 }
@@ -204,16 +220,26 @@ void shutdown() {
 
     g_models.clear();
 
+    delete g_rootItem;
+    g_rootItem = nullptr;
+
     delete g_engine;
     g_engine = nullptr;
-    g_signalForwarder = nullptr; // owned by engine
-    g_qmlWatcher = nullptr;     // owned by engine
-    g_directoryWatcher = nullptr; // owned by engine
-    g_stateNotifier = nullptr;  // owned by engine
-    g_state = nullptr;          // owned by engine
 
+    delete g_window;
+    g_window = nullptr;
+
+    // All long-lived objects are parented to g_app — deleted with it
     delete g_app;
     g_app = nullptr;
+    g_signalForwarder = nullptr;
+#ifdef CUIRQ_DEV_RELOAD
+    g_qmlWatcher = nullptr;
+    g_reloadPopup = nullptr;
+#endif
+    g_directoryWatcher = nullptr;
+    g_stateNotifier = nullptr;
+    g_state = nullptr;
 
     for (char* arg : g_argv_storage) {
         delete[] arg;
@@ -251,45 +277,69 @@ bool load_qml(const char* path) {
     }
 
     QString contentPath = QString::fromUtf8(path);
-    QUrl contentUrl = QUrl::fromLocalFile(contentPath);
-    g_contentUrl = contentUrl.toString();
+    g_contentUrl = contentPath;
 
     // Add content directory to import path so qmldir singletons are found
     QString contentDir = QFileInfo(contentPath).absolutePath();
     g_engine->addImportPath(contentDir);
 
-    // Set up file watching + Theme context property BEFORE loading content
+#ifdef CUIRQ_DEV_RELOAD
     if (g_qmlWatcher) {
         g_qmlWatcher->watchFile(contentPath);
     }
+#endif
 
-    if (!g_shellLoaded) {
-        // First load: set content URL and load the shell
-        QString shellPath = findShellQmlPath();
-        if (shellPath.isEmpty()) {
-            std::cerr << "[CPP] ERROR: shell.qml not found" << std::endl;
-            return false;
-        }
+    std::cout << "[CPP] Loading QML: " << contentPath.toStdString() << std::endl;
 
-        std::cout << "[CPP] Loading shell from: " << shellPath.toStdString() << std::endl;
-        std::cout << "[CPP] Content URL: " << contentPath.toStdString() << std::endl;
-
-        g_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
-        g_engine->load(QUrl::fromLocalFile(shellPath));
-
-        if (g_engine->rootObjects().isEmpty()) {
-            std::cerr << "[CPP] ERROR: Failed to load shell.qml" << std::endl;
-            return false;
-        }
-
-        g_shellLoaded = true;
-        std::cout << "[CPP] Shell + content loaded successfully" << std::endl;
-    } else {
-        // Subsequent loads: just update the content URL (Loader picks it up)
-        std::cout << "[CPP] Updating content URL: " << contentPath.toStdString() << std::endl;
-        g_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
+    // Load QML as Item via QQmlComponent
+    QQmlComponent component(g_engine, QUrl::fromLocalFile(contentPath));
+    if (component.isError()) {
+        for (const auto& err : component.errors())
+            qWarning().noquote() << err.toString();
+        return false;
     }
 
+    QObject* obj = component.create();
+    g_rootItem = qobject_cast<QQuickItem*>(obj);
+    if (!g_rootItem) {
+        std::cerr << "[CPP] ERROR: Root QML must be an Item, not a Window" << std::endl;
+        delete obj;
+        return false;
+    }
+
+    // Create persistent window (first load only)
+    if (!g_window) {
+        g_window = new QQuickWindow();
+
+        // Read optional window properties from root Item
+        QVariant vTitle = g_rootItem->property("windowTitle");
+        if (vTitle.isValid()) g_window->setTitle(vTitle.toString());
+
+        QVariant vWidth = g_rootItem->property("windowWidth");
+        QVariant vHeight = g_rootItem->property("windowHeight");
+        if (vWidth.isValid() && vHeight.isValid())
+            g_window->resize(vWidth.toInt(), vHeight.toInt());
+
+        QVariant vColor = g_rootItem->property("windowColor");
+        if (vColor.isValid()) g_window->setColor(vColor.value<QColor>());
+        else g_window->setColor(Qt::white);
+
+        // Keep root item sized to window — connected once, lambdas read global g_rootItem
+        QObject::connect(g_window, &QQuickWindow::widthChanged, g_window, [](int) {
+            if (g_rootItem) g_rootItem->setWidth(g_window->width());
+        });
+        QObject::connect(g_window, &QQuickWindow::heightChanged, g_window, [](int) {
+            if (g_rootItem) g_rootItem->setHeight(g_window->height());
+        });
+    }
+
+    // Parent QML root into window content area
+    g_rootItem->setParentItem(g_window->contentItem());
+    g_rootItem->setWidth(g_window->width());
+    g_rootItem->setHeight(g_window->height());
+
+    g_window->show();
+    std::cout << "[CPP] QML loaded successfully" << std::endl;
     return true;
 }
 
@@ -321,7 +371,7 @@ void register_signal_handler(const char* name) {
 }
 
 void create_model(const char* name) {
-    if (!g_engine) {
+    if (!g_app) {
         std::cerr << "[CPP] ERROR: Qt not initialized!" << std::endl;
         return;
     }
@@ -330,9 +380,10 @@ void create_model(const char* name) {
         std::cout << "[CPP] Model already exists: " << name << std::endl;
         return;
     }
-    JvmListModel* model = new JvmListModel(g_engine);
+    JvmListModel* model = new JvmListModel(g_app);
     g_models.insert(qname, model);
-    g_engine->rootContext()->setContextProperty(qname, model);
+    if (g_engine)
+        g_engine->rootContext()->setContextProperty(qname, model);
     std::cout << "[CPP] Model created and registered: " << name << std::endl;
 }
 
@@ -414,6 +465,7 @@ void stop_directory_watch() {
     }
 }
 
+#ifdef CUIRQ_DEV_RELOAD
 void set_auto_reload(bool enabled) {
     if (g_qmlWatcher) {
         g_qmlWatcher->setAutoReload(enabled);
@@ -427,43 +479,28 @@ bool is_auto_reload_enabled() {
     }
     return false;
 }
+#endif
 
 void hide_titlebar() {
 #ifdef Q_OS_MACOS
-    if (!g_engine || g_engine->rootObjects().isEmpty()) {
-        std::cerr << "[CPP] ERROR: No root window for titlebar setup" << std::endl;
+    if (!g_window) {
+        std::cerr << "[CPP] ERROR: No window for titlebar setup" << std::endl;
         return;
     }
-    QObject* root = g_engine->rootObjects().first();
-    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
-    if (!window) {
-        std::cerr << "[CPP] ERROR: Root object is not a QQuickWindow" << std::endl;
-        return;
-    }
-    QTimer::singleShot(0, window, [window]() {
-        void* winId = reinterpret_cast<void*>(window->winId());
-        int tbHeight = hideTitlebar(winId);
-        g_engine->rootContext()->setContextProperty("_cuirq_titlebar_height", tbHeight);
+    QTimer::singleShot(0, g_window, []() {
+        void* winId = reinterpret_cast<void*>(g_window->winId());
+        g_titlebarHeight = hideTitlebar(winId);
+        if (g_engine)
+            g_engine->rootContext()->setContextProperty("_cuirq_titlebar_height", g_titlebarHeight);
     });
-#else
-    g_engine->rootContext()->setContextProperty("_cuirq_titlebar_height", 0);
 #endif
 }
 
 void enable_sidebar_vibrancy(int width) {
 #ifdef Q_OS_MACOS
-    if (!g_engine || g_engine->rootObjects().isEmpty()) {
-        std::cerr << "[CPP] ERROR: No root window for vibrancy setup" << std::endl;
-        return;
-    }
-    QObject* root = g_engine->rootObjects().first();
-    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
-    if (!window) {
-        std::cerr << "[CPP] ERROR: Root object is not a QQuickWindow" << std::endl;
-        return;
-    }
-    QTimer::singleShot(0, window, [window, width]() {
-        void* winId = reinterpret_cast<void*>(window->winId());
+    if (!g_window) return;
+    QTimer::singleShot(0, g_window, [width]() {
+        void* winId = reinterpret_cast<void*>(g_window->winId());
         setupSidebarVibrancy(winId, width);
     });
 #else
@@ -473,12 +510,9 @@ void enable_sidebar_vibrancy(int width) {
 
 void enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight) {
 #ifdef Q_OS_MACOS
-    if (!g_engine || g_engine->rootObjects().isEmpty()) return;
-    QObject* root = g_engine->rootObjects().first();
-    QQuickWindow* window = qobject_cast<QQuickWindow*>(root);
-    if (!window) return;
-    QTimer::singleShot(0, window, [window, sidebarWidth, toolbarHeight]() {
-        void* winId = reinterpret_cast<void*>(window->winId());
+    if (!g_window) return;
+    QTimer::singleShot(0, g_window, [sidebarWidth, toolbarHeight]() {
+        void* winId = reinterpret_cast<void*>(g_window->winId());
         setupToolbarVibrancy(winId, sidebarWidth, toolbarHeight);
     });
 #else

@@ -63,6 +63,7 @@ void cuirq_sort_model(const char* name, const char* role, bool ascending) {
     cuirq::sort_model(name, role, ascending);
 }
 
+#ifdef CUIRQ_DEV_RELOAD
 void cuirq_set_auto_reload(bool enabled) {
     cuirq::set_auto_reload(enabled);
 }
@@ -70,6 +71,7 @@ void cuirq_set_auto_reload(bool enabled) {
 bool cuirq_is_auto_reload_enabled(void) {
     return cuirq::is_auto_reload_enabled();
 }
+#endif
 
 void cuirq_start_directory_watch(const char* path) {
     cuirq::start_directory_watch(path);

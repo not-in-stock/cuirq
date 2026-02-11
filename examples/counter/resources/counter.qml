@@ -4,8 +4,7 @@ import QtQuick.Layouts
 
 Item {
     id: root
-
-    // Window properties — shell.qml reads these
+    // Window configuration (read by C++ on first load)
     property string windowTitle: "cuirq Counter!!!"
     property int windowWidth: 500
     property int windowHeight: 400

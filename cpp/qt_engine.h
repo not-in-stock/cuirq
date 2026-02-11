@@ -31,9 +31,11 @@ void clear_model(const char* name);
 int get_model_count(const char* name);
 void sort_model(const char* name, const char* role, bool ascending);
 
-// Hot-reload
+// Hot-reload (dev only)
+#ifdef CUIRQ_DEV_RELOAD
 void set_auto_reload(bool enabled);
 bool is_auto_reload_enabled();
+#endif
 
 // Directory watching
 void start_directory_watch(const char* path);

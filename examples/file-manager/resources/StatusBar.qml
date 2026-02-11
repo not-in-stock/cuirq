@@ -7,7 +7,7 @@ Rectangle {
     property int itemCount: 0
     property string currentPath: ""
 
-    height: theme.statusBarHeight
+    height: Theme.statusBarHeight
     color: "transparent"
 
     Rectangle {
@@ -15,10 +15,10 @@ Rectangle {
         anchors.right: parent.right
         anchors.top: parent.top
         height: 1
-        color: theme.border
+        color: Theme.border
         Behavior on color {
             ColorAnimation {
-                duration: theme.animDuration
+                duration: Theme.animDuration
             }
         }
     }
@@ -30,9 +30,16 @@ Rectangle {
         spacing: 16
 
         Text {
+            text: "🔥 HOT RELOAD!!!"
+            font.pixelSize: 12
+            color: "#E53E3E"
+            font.bold: true
+        }
+
+        Text {
             text: statusBar.itemCount + " items"
             font.pixelSize: 12
-            color: theme.textSecondary
+            color: Theme.textSecondary
         }
 
         Item {
@@ -42,7 +49,7 @@ Rectangle {
         Text {
             text: statusBar.currentPath
             font.pixelSize: 12
-            color: theme.textTertiary
+            color: Theme.textTertiary
             elide: Text.ElideMiddle
             Layout.maximumWidth: 400
         }

@@ -1,21 +1,30 @@
 #include "qmlwatcher.h"
 #include "stateobject.h"
+#include "reload_popup.h"
 #include <QDebug>
 #include <QUrl>
+#include <QQmlEngine>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QDir>
+#include <QQuickWindow>
+#include <QQuickItem>
 
-QmlWatcher::QmlWatcher(QQmlApplicationEngine* engine, QObject *parent)
+// These are defined in qt_engine.cpp and accessed during reload
+extern QQuickWindow* g_window;
+extern QQuickItem* g_rootItem;
+extern QQmlEngine* g_engine;
+extern ReloadPopup* g_reloadPopup;
+void setupEngine();
+
+QmlWatcher::QmlWatcher(QObject *parent)
     : QObject(parent)
-    , m_engine(engine)
     , m_watcher(new QFileSystemWatcher(this))
     , m_debounce(new QTimer(this))
     , m_state(nullptr)
-    , m_themeObject(nullptr)
     , m_autoReload(true)
 {
     qDebug() << "[CPP] QmlWatcher created";
@@ -40,6 +49,7 @@ void QmlWatcher::watchFile(const QString& filePath)
     qDebug() << "[CPP] QmlWatcher: Starting to watch" << filePath;
 
     m_currentQmlPath = filePath;
+    m_contentDir = QFileInfo(filePath).absolutePath();
 
     // Watch the file itself
     if (!m_watcher->files().contains(filePath)) {
@@ -49,8 +59,7 @@ void QmlWatcher::watchFile(const QString& filePath)
     }
 
     // Watch all .qml files in the same directory (Theme, components, etc.)
-    QString dir = QFileInfo(filePath).absolutePath();
-    QDir qmlDir(dir);
+    QDir qmlDir(m_contentDir);
     for (const QString& entry : qmlDir.entryList({"*.qml"}, QDir::Files)) {
         QString fullPath = qmlDir.absoluteFilePath(entry);
         if (!m_watcher->files().contains(fullPath)) {
@@ -61,15 +70,10 @@ void QmlWatcher::watchFile(const QString& filePath)
     }
 
     // Watch the directory (for new/deleted files)
-    if (!m_watcher->directories().contains(dir)) {
-        if (m_watcher->addPath(dir)) {
-            qDebug() << "[CPP] QmlWatcher: Watching directory" << dir;
+    if (!m_watcher->directories().contains(m_contentDir)) {
+        if (m_watcher->addPath(m_contentDir)) {
+            qDebug() << "[CPP] QmlWatcher: Watching directory" << m_contentDir;
         }
-    }
-
-    // Create initial Theme context property (replaces pragma Singleton)
-    if (!m_themeObject) {
-        loadTheme(dir);
     }
 }
 
@@ -89,40 +93,6 @@ void QmlWatcher::setStateObject(StateObject* state)
     m_state = state;
 }
 
-void QmlWatcher::loadTheme(const QString& contentDir)
-{
-    QString themePath = contentDir + "/Theme.qml";
-    if (!QFileInfo::exists(themePath)) return;
-
-    // Read file manually to bypass any URL-based caching
-    QFile file(themePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "[CPP] QmlWatcher: Cannot open Theme.qml";
-        return;
-    }
-    QByteArray data = file.readAll();
-    file.close();
-
-    QQmlComponent comp(m_engine);
-    comp.setData(data, QUrl::fromLocalFile(themePath));
-    if (!comp.isReady()) {
-        qWarning() << "[CPP] QmlWatcher: Theme.qml errors:" << comp.errors();
-        return;
-    }
-
-    QObject* newTheme = comp.create();
-    if (!newTheme) {
-        qWarning() << "[CPP] QmlWatcher: Failed to instantiate Theme";
-        return;
-    }
-
-    delete m_themeObject;
-    m_themeObject = newTheme;
-    m_themeObject->setParent(m_engine);
-    m_engine->rootContext()->setContextProperty("theme", m_themeObject);
-    qDebug() << "[CPP] QmlWatcher: Theme reloaded from" << themePath;
-}
-
 void QmlWatcher::setAutoReload(bool enabled)
 {
     m_autoReload = enabled;
@@ -133,6 +103,22 @@ void QmlWatcher::onFileChanged(const QString& path)
 {
     if (!m_autoReload) return;
     if (!path.endsWith(".qml")) return;
+
+    // Skip zero-byte files (truncate step of atomic save)
+    QFileInfo fi(path);
+    if (fi.exists() && fi.size() == 0) {
+        qDebug() << "[CPP] QmlWatcher: Skipping empty file (truncate step):" << path;
+        if (!m_watcher->files().contains(path))
+            m_watcher->addPath(path);
+        return;
+    }
+
+    // Track disappeared files (editor atomic saves: delete + recreate)
+    if (!fi.exists()) {
+        qDebug() << "[CPP] QmlWatcher: File disappeared:" << path;
+        m_deletedFiles.insert(path);
+        return;
+    }
 
     qDebug() << "[CPP] QmlWatcher: File changed:" << path;
 
@@ -148,7 +134,23 @@ void QmlWatcher::onDirectoryChanged(const QString& path)
 {
     if (!m_autoReload) return;
 
-    // Rescan for new/deleted .qml files; ignore editor temp files (.#, #...#, ~)
+    // Check for reappeared files (editor atomic saves: delete + recreate)
+    QSet<QString> reappeared;
+    for (const QString& f : m_deletedFiles) {
+        if (QFileInfo::exists(f)) {
+            reappeared.insert(f);
+            if (!m_watcher->files().contains(f))
+                m_watcher->addPath(f);
+            qDebug() << "[CPP] QmlWatcher: File reappeared:" << QFileInfo(f).fileName();
+        }
+    }
+    if (!reappeared.isEmpty()) {
+        m_deletedFiles.subtract(reappeared);
+        m_debounce->start();
+        return;
+    }
+
+    // Rescan for new/deleted .qml files
     QDir dir(path);
     QSet<QString> currentQml;
     for (const QString& entry : dir.entryList({"*.qml"}, QDir::Files)) {
@@ -187,34 +189,60 @@ void QmlWatcher::onDirectoryChanged(const QString& path)
 
 void QmlWatcher::reloadContent()
 {
-    if (!m_engine || m_currentQmlPath.isEmpty()) {
-        qWarning() << "[CPP] QmlWatcher: No engine or content path for reload";
+    if (m_currentQmlPath.isEmpty()) {
+        qWarning() << "[CPP] QmlWatcher: No content path for reload";
         return;
     }
 
-    QQmlContext* ctx = m_engine->rootContext();
-    QUrl contentUrl = QUrl::fromLocalFile(m_currentQmlPath);
+    qDebug() << "[CPP] QmlWatcher: Reloading content (proxy window)...";
 
-    qDebug() << "[CPP] QmlWatcher: Reloading content...";
+    // 1. Detach old root from window and destroy old engine
+    //    Must delete old engine BEFORE creating new one — Qt's global type
+    //    registry can serve cached compilations to a new engine otherwise.
+    if (g_rootItem) {
+        g_rootItem->setParentItem(nullptr);
+        delete g_rootItem;
+        g_rootItem = nullptr;
+    }
+    delete g_engine;
+    g_engine = nullptr;
 
-    // Step 1: Unload (Loader source → empty)
-    ctx->setContextProperty("_cuirq_content_url", QUrl());
+    // 2. Create fresh engine with all context properties
+    setupEngine();
+    g_engine->addImportPath(m_contentDir);
 
-    // Step 2: Clear cache + reload on next tick
-    QString contentDir = QFileInfo(m_currentQmlPath).absolutePath();
-    QTimer::singleShot(0, this, [this, contentUrl, contentDir]() {
-        m_engine->clearComponentCache();
+    // 3. Load QML in new engine
+    QQmlComponent component(g_engine, QUrl::fromLocalFile(m_currentQmlPath));
+    if (component.isError()) {
+        qWarning() << "[CPP] QmlWatcher: Reload failed:";
+        for (const auto& err : component.errors())
+            qWarning().noquote() << err.toString();
+        if (g_reloadPopup)
+            g_reloadPopup->showError("Failed to load " + m_currentQmlPath);
+        return;
+    }
 
-        // Recreate Theme from updated file (context property, not singleton)
-        loadTheme(contentDir);
+    QObject* obj = component.create();
+    auto* newRootItem = qobject_cast<QQuickItem*>(obj);
+    if (!newRootItem) {
+        qWarning() << "[CPP] QmlWatcher: Root QML must be an Item";
+        delete obj;
+        return;
+    }
 
-        m_engine->rootContext()->setContextProperty("_cuirq_content_url", contentUrl);
-        // Step 3: Re-emit state so Connections in fresh QML pick up current values
-        if (m_state) {
-            QTimer::singleShot(0, this, [this]() {
-                m_state->reemitAll();
-            });
-        }
-        qDebug() << "[CPP] QmlWatcher: Reload complete";
-    });
+    // 4. Attach new root to persistent window
+    newRootItem->setParentItem(g_window->contentItem());
+    newRootItem->setWidth(g_window->width());
+    newRootItem->setHeight(g_window->height());
+    g_rootItem = newRootItem;
+
+    // 5. Re-emit state so fresh QML picks up current values
+    if (m_state) {
+        QTimer::singleShot(0, this, [this]() {
+            m_state->reemitAll();
+        });
+    }
+
+    if (g_reloadPopup) g_reloadPopup->showSuccess();
+    qDebug() << "[CPP] QmlWatcher: Reload complete (no flicker)";
 }

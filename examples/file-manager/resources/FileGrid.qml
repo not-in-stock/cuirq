@@ -3,26 +3,26 @@ import QtQuick.Controls
 
 Rectangle {
     id: fileGrid
-    color: theme.background
+    color: Theme.background
     Behavior on color {
         ColorAnimation {
-            duration: theme.animDuration
+            duration: Theme.animDuration
         }
     }
 
-    readonly property real _availableWidth: Math.max(theme.gridMinCellWidth, gridView.width)
-    readonly property int _columns: Math.max(1, Math.floor(_availableWidth / theme.gridMinCellWidth))
+    readonly property real _availableWidth: Math.max(Theme.gridMinCellWidth, gridView.width)
+    readonly property int _columns: Math.max(1, Math.floor(_availableWidth / Theme.gridMinCellWidth))
 
     GridView {
         id: gridView
-        y: theme.toolbarHeight
+        y: Theme.toolbarHeight
         width: parent.width
-        height: parent.height - theme.toolbarHeight - theme.statusBarHeight
+        height: parent.height - Theme.toolbarHeight - Theme.statusBarHeight
         topMargin: 10
         cellWidth: fileGrid._availableWidth / fileGrid._columns
-        cellHeight: theme.gridCellHeight
-        displayMarginBeginning: theme.toolbarHeight
-        displayMarginEnd: theme.statusBarHeight
+        cellHeight: Theme.gridCellHeight
+        displayMarginBeginning: Theme.toolbarHeight
+        displayMarginEnd: Theme.statusBarHeight
         clip: false
         ScrollBar.vertical: OverlayScrollBar {}
         MouseWheelBooster {
@@ -50,31 +50,31 @@ Rectangle {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: theme.animItemDuration
+                duration: Theme.animItemDuration
             }
             NumberAnimation {
                 property: "scale"
-                from: theme.animItemScale
+                from: Theme.animItemScale
                 to: 1
-                duration: theme.animItemDuration
+                duration: Theme.animItemDuration
             }
         }
         remove: Transition {
             NumberAnimation {
                 property: "opacity"
                 to: 0
-                duration: theme.animItemDuration
+                duration: Theme.animItemDuration
             }
             NumberAnimation {
                 property: "scale"
-                to: theme.animItemScale
-                duration: theme.animItemDuration
+                to: Theme.animItemScale
+                duration: Theme.animItemDuration
             }
         }
         displaced: Transition {
             NumberAnimation {
                 properties: "x,y"
-                duration: theme.animItemDuration
+                duration: Theme.animItemDuration
                 easing.type: Easing.OutCubic
             }
         }
@@ -83,7 +83,7 @@ Rectangle {
             anchors.centerIn: parent
             text: "This folder is empty"
             font.pixelSize: 16
-            color: theme.textSecondary
+            color: Theme.textSecondary
             visible: gridView.count === 0
         }
     }

@@ -12,7 +12,7 @@ Rectangle {
 
     onColumnPathChanged: listView.contentY = -listView.topMargin
 
-    width: theme.millerColumnWidth
+    width: Theme.millerColumnWidth
     color: "transparent"
 
     function iconSource(type) {
@@ -42,10 +42,10 @@ Rectangle {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 1
-        color: theme.separator
+        color: Theme.separator
         Behavior on color {
             ColorAnimation {
-                duration: theme.animDuration
+                duration: Theme.animDuration
             }
         }
     }
@@ -57,28 +57,28 @@ Rectangle {
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         clip: true
-        topMargin: theme.toolbarHeight
-        displayMarginBeginning: theme.toolbarHeight
+        topMargin: Theme.toolbarHeight
+        displayMarginBeginning: Theme.toolbarHeight
 
         model: root.columnModel
 
         ScrollBar.vertical: OverlayScrollBar {
-            topPadding: theme.toolbarHeight
+            topPadding: Theme.toolbarHeight
         }
 
         delegate: Rectangle {
             id: delegateItem
             width: listView.width
-            height: theme.millerItemHeight
+            height: Theme.millerItemHeight
 
             readonly property bool isSelected: model.path === root.selectedChildPath
             readonly property bool isHovered: delegateMouse.containsMouse
 
-            color: isSelected ? theme.millerSelection : (isHovered ? theme.surfaceHover : theme.surfaceHoverOff)
+            color: isSelected ? Theme.millerSelection : (isHovered ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
             Behavior on color {
                 ColorAnimation {
-                    duration: theme.animHoverDuration
+                    duration: Theme.animHoverDuration
                 }
             }
 
@@ -102,13 +102,13 @@ Rectangle {
                 Text {
                     text: model.name
                     font.pixelSize: 12
-                    color: theme.textPrimary
+                    color: Theme.textPrimary
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 18 - 6 - (model.isDir ? 14 : 0) - 12
                     Behavior on color {
                         ColorAnimation {
-                            duration: theme.animDuration
+                            duration: Theme.animDuration
                         }
                     }
                 }
@@ -146,7 +146,7 @@ Rectangle {
             anchors.centerIn: parent
             text: "Empty"
             font.pixelSize: 12
-            color: theme.textTertiary
+            color: Theme.textTertiary
             visible: listView.count === 0
         }
     }

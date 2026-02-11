@@ -3,25 +3,26 @@
 
 #include <QObject>
 #include <QFileSystemWatcher>
-#include <QQmlApplicationEngine>
 #include <QString>
-#include <QMap>
+#include <QSet>
 #include <QTimer>
 
 class StateObject;
 
 /**
- * QmlWatcher - Watches QML files and triggers automatic reload on changes.
+ * QmlWatcher - Watches QML files and triggers engine-per-reload on changes.
  *
- * Inspired by QuickShell's approach to live development.
- * This class is designed to be compile-time excluded in production builds.
+ * On file change: destroys old engine, creates fresh one via setupEngine(),
+ * re-loads root QML. Accepts brief flicker (window destroyed + recreated).
+ *
+ * Compile-time excluded in production builds (CUIRQ_DEV_RELOAD).
  */
 class QmlWatcher : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit QmlWatcher(QQmlApplicationEngine* engine, QObject *parent = nullptr);
+    explicit QmlWatcher(QObject *parent = nullptr);
     void setStateObject(StateObject* state);
     ~QmlWatcher() override;
 
@@ -40,16 +41,15 @@ private slots:
     void onDirectoryChanged(const QString& path);
 
 private:
-    QQmlApplicationEngine* m_engine;
     QFileSystemWatcher* m_watcher;
     QTimer* m_debounce;
     StateObject* m_state;
-    QObject* m_themeObject;
     bool m_autoReload;
     QString m_currentQmlPath;
+    QString m_contentDir;
+    QSet<QString> m_deletedFiles;
 
     void reloadContent();
-    void loadTheme(const QString& contentDir);
 };
 
 #endif // QMLWATCHER_H

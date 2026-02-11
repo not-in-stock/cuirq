@@ -27,8 +27,10 @@ void cuirq_clear_model(const char* name);
 int  cuirq_get_model_count(const char* name);
 void cuirq_sort_model(const char* name, const char* role, bool ascending);
 
+#ifdef CUIRQ_DEV_RELOAD
 void cuirq_set_auto_reload(bool enabled);
 bool cuirq_is_auto_reload_enabled(void);
+#endif
 
 void cuirq_start_directory_watch(const char* path);
 void cuirq_watch_directories(const char* json_paths);

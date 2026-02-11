@@ -8,7 +8,7 @@
   {:doc "Build C++ bridge library and Java classes"
    :task (do
            (println "Building C++ bridge...")
-           (shell "cmake -B build -G Ninja")
+           (shell "cmake -B build -G Ninja -DCUIRQ_DEV_RELOAD=ON")
            (shell "cmake --build build")
            (println "C++ bridge built")
 
@@ -17,6 +17,21 @@
            (shell "javac --release 25 -d build/classes java/qml/QtThread.java java/qml/PanamaBridge.java")
            (println "Java classes compiled")
            (println "\n Build completed successfully"))}
+
+  ;; Build C++ bridge for production (no hot-reload)
+  build-release
+  {:doc "Build C++ bridge without hot-reload (for bundling)"
+   :task (do
+           (println "Building C++ bridge (release, no hot-reload)...")
+           (shell "cmake -B build -G Ninja -DCUIRQ_DEV_RELOAD=OFF")
+           (shell "cmake --build build")
+           (println "C++ bridge built (release)")
+
+           (println "\n Compiling Java classes...")
+           (shell "mkdir -p build/classes")
+           (shell "javac --release 25 -d build/classes java/qml/QtThread.java java/qml/PanamaBridge.java")
+           (println "Java classes compiled")
+           (println "\n Release build completed successfully"))}
 
   ;; Clean build artifacts
   clean

@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/cuirq">
+        <file>qml/ReloadPopup.qml</file>
+    </qresource>
+</RCC>

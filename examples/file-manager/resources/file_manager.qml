@@ -4,10 +4,11 @@ import QtQuick.Layouts
 
 Item {
     id: root
-
+    // Window configuration (read by C++ on first load)
     property string windowTitle: "cuirq File Manager"
     property int windowWidth: 1024
     property int windowHeight: 700
+    property color windowColor: "transparent"
 
     property string currentPath: ""
     property bool canGoBack: false
@@ -59,6 +60,7 @@ Item {
 
     RowLayout {
         anchors.fill: parent
+        anchors.topMargin: _cuirq_titlebar_height ? -_cuirq_titlebar_height : 0
         spacing: 0
 
         Sidebar {
@@ -75,10 +77,10 @@ Item {
                 id: contentArea
                 anchors.fill: parent
                 clip: true
-                color: theme.background
+                color: Theme.background
                 Behavior on color {
                     ColorAnimation {
-                        duration: theme.animDuration
+                        duration: Theme.animDuration
                     }
                 }
 
@@ -89,7 +91,7 @@ Item {
                     opacity: 0
                     transform: Translate {
                         id: gridTranslate
-                        y: theme.animViewOffset
+                        y: Theme.animViewOffset
                     }
                 }
 
@@ -102,7 +104,7 @@ Item {
                     opacity: 0
                     transform: Translate {
                         id: listTranslate
-                        y: theme.animViewOffset
+                        y: Theme.animViewOffset
                     }
                 }
 
@@ -115,7 +117,7 @@ Item {
                     opacity: 0
                     transform: Translate {
                         id: columnsTranslate
-                        y: theme.animViewOffset
+                        y: Theme.animViewOffset
                     }
                 }
 
@@ -126,15 +128,15 @@ Item {
                         property: "opacity"
                         from: 0
                         to: 1
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                     NumberAnimation {
                         target: gridTranslate
                         property: "y"
-                        from: theme.animViewOffset
+                        from: Theme.animViewOffset
                         to: 0
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                 }
@@ -146,15 +148,15 @@ Item {
                         property: "opacity"
                         from: 0
                         to: 1
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                     NumberAnimation {
                         target: listTranslate
                         property: "y"
-                        from: theme.animViewOffset
+                        from: Theme.animViewOffset
                         to: 0
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                 }
@@ -166,15 +168,15 @@ Item {
                         property: "opacity"
                         from: 0
                         to: 1
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                     NumberAnimation {
                         target: columnsTranslate
                         property: "y"
-                        from: theme.animViewOffset
+                        from: Theme.animViewOffset
                         to: 0
-                        duration: theme.animViewDuration
+                        duration: Theme.animViewDuration
                         easing.type: Easing.OutQuad
                     }
                 }
@@ -210,15 +212,15 @@ Item {
                 height: toolbar.height
                 z: 1
                 sourceItem: contentArea
-                overlayColor: theme.toolbarOverlay
+                overlayColor: Theme.toolbarOverlay
             }
 
             BlurPanel {
                 id: listHeaderBlur
                 anchors.left: parent.left
                 anchors.right: parent.right
-                y: theme.toolbarHeight
-                height: theme.listHeaderHeight
+                y: Theme.toolbarHeight
+                height: Theme.listHeaderHeight
                 z: 1
                 visible: root.viewMode === "list"
                 sourceItem: contentArea
@@ -229,8 +231,8 @@ Item {
                 id: listHeaderControls
                 anchors.left: parent.left
                 anchors.right: parent.right
-                y: theme.toolbarHeight
-                height: theme.listHeaderHeight
+                y: Theme.toolbarHeight
+                height: Theme.listHeaderHeight
                 z: 2
                 visible: root.viewMode === "list"
 
@@ -240,7 +242,7 @@ Item {
                     ColumnHeader {
                         label: "Name"
                         field: "name"
-                        width: parent.width - listView.colRightWidth - theme.listPadding
+                        width: parent.width - listView.colRightWidth - Theme.listPadding
                     }
                     ColumnHeader {
                         label: "Size"
@@ -264,7 +266,7 @@ Item {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     height: 1
-                    color: theme.separator
+                    color: Theme.separator
                 }
             }
 
@@ -281,8 +283,8 @@ Item {
                 viewMode: root.viewMode
                 onViewModeRequested: mode => root.viewMode = mode
                 onThemeCycled: {
-                    let next = theme.themeMode === "system" ? "light" : theme.themeMode === "light" ? "dark" : "system";
-                    theme.themeMode = next;
+                    let next = Theme.themeMode === "system" ? "light" : Theme.themeMode === "light" ? "dark" : "system";
+                    Theme.themeMode = next;
                     signalForwarder.emitSignal("themeChanged", [next]);
                 }
             }
@@ -319,10 +321,10 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: headerMouse.containsMouse ? theme.surfaceHover : theme.surfaceHoverOff
+            color: headerMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
             Behavior on color {
                 ColorAnimation {
-                    duration: theme.animHoverDuration
+                    duration: Theme.animHoverDuration
                 }
             }
         }
@@ -337,14 +339,14 @@ Item {
                 text: colHeader.label
                 font.pixelSize: 11
                 font.weight: colHeader.active ? Font.DemiBold : Font.Normal
-                color: colHeader.active ? theme.textPrimary : theme.textSecondary
+                color: colHeader.active ? Theme.textPrimary : Theme.textSecondary
                 anchors.verticalCenter: parent.verticalCenter
             }
 
             Text {
                 text: root.sortAscending ? "\u25B2" : "\u25BC"
                 font.pixelSize: 8
-                color: theme.textSecondary
+                color: Theme.textSecondary
                 visible: colHeader.active
                 anchors.verticalCenter: parent.verticalCenter
             }
