@@ -76,7 +76,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Done**: Created `config/META-INF/native-image/cuirq/native-image.properties` with `--initialize-at-run-time=qml.PanamaBridge,qml.QtThread`. Auto-discovered via `:native-image` alias (`{:extra-paths ["config"]}`). Also updated `reflect-config.json` — renamed `qml.Bridge` → `qml.PanamaBridge`, added `qml.QtThread`.
 
-### 3. Register FFM descriptors for native-image
+### 3. Register FFM descriptors for native-image [Done]
 
 **Problem**: GraalVM native-image needs to know all `FunctionDescriptor` signatures at build time to generate the supporting code for downcalls and upcalls.
 
@@ -89,6 +89,8 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Complexity**: Low (downgraded from Medium — agent works reliably)
 **Priority**: Blocker
+
+**Done**: Added `bb trace <example>` task that runs with `-agentlib:native-image-agent=config-merge-dir=config/` (requires `nix develop` for GraalVM). Ran both counter and file-manager — agent generated `reachability-metadata.json` (GraalVM 25 unified format) with all FFM descriptors: 14 downcalls + 2 upcalls (`QtThread.executeTask`, `PanamaBridge.onSignal`). Also captured reflection metadata for all Clojure runtime classes and resource patterns. Removed obsolete `reflect-config.json` (superseded by unified metadata).
 
 ### 4. Add reflection configuration for Clojure runtime
 
