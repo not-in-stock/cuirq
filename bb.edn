@@ -117,4 +117,4 @@
                          panama-flag
                          "-J-Djava.library.path=" lib-path " "
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
-                         "-M:dev:nrepl:bridge"))))}}}
+                         "-M:dev:bridge"))))}}}

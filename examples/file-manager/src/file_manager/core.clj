@@ -4,9 +4,7 @@
             [cuirq.models :as models]
             [file-manager.dirs :as dirs]
             [file-manager.tree :as tree]
-            [clojure.data.json :as json]
-            [nrepl.server :as nrepl]
-            [cider.nrepl :refer [cider-nrepl-handler]])
+            [clojure.data.json :as json])
   (:import [java.io File])
   (:gen-class))
 
@@ -378,13 +376,8 @@
   (println "cuirq File Manager")
   (println "========================================\n")
 
-  (let [port 7889
-        server (atom nil)]
-    (try
-      (reset! server (nrepl/start-server :port port :handler cider-nrepl-handler))
-      (println (str " nREPL server started on port " port))
-
-      (cuirq/with-qt ["-platform" "cocoa"]
+  (try
+    (cuirq/with-qt ["-platform" "cocoa"]
         ;; Create files model + miller column pool
         (println " [1/4] Creating models...")
         (models/create-model! :files)
@@ -504,13 +497,10 @@
 
         (cuirq/exec!))
 
-      (catch Exception e
-        (println "\nError:" (.getMessage e))
-        (when-let [data (ex-data e)]
-          (println "  Details:" data)))
+    (catch Exception e
+      (println "\nError:" (.getMessage e))
+      (when-let [data (ex-data e)]
+        (println "  Details:" data)))
 
-      (finally
-        (when @server
-          (nrepl/stop-server @server)
-          (println "nREPL server stopped"))
-        (println "Bye!")))))
+    (finally
+      (println "Bye!"))))
