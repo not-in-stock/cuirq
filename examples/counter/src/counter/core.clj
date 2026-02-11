@@ -8,6 +8,8 @@
             [cuirq.state :as state])
   (:gen-class))
 
+(set! *warn-on-reflection* true)
+
 (defn -main [& _args]
   (println "\n========================================")
   (println "cuirq Counter Example")

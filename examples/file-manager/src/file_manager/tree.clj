@@ -2,6 +2,8 @@
   "Tree expand/collapse state and flat-list builder for FileList."
   (:require [file-manager.dirs :as dirs]))
 
+(set! *warn-on-reflection* true)
+
 ;; Set of expanded directory paths
 (defonce !expanded (atom #{}))
 

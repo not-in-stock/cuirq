@@ -92,7 +92,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Done**: Added `bb trace <example>` task that runs with `-agentlib:native-image-agent=config-merge-dir=config/` (requires `nix develop` for GraalVM). Ran both counter and file-manager — agent generated `reachability-metadata.json` (GraalVM 25 unified format) with all FFM descriptors: 14 downcalls + 2 upcalls (`QtThread.executeTask`, `PanamaBridge.onSignal`). Also captured reflection metadata for all Clojure runtime classes and resource patterns. Removed obsolete `reflect-config.json` (superseded by unified metadata).
 
-### 4. Add reflection configuration for Clojure runtime
+### 4. Add reflection configuration for Clojure runtime [Done]
 
 **Problem**: Clojure itself uses reflection for protocol dispatch, multimethod resolution, and `defrecord`/`deftype` interop. `clojure.data.json` uses `extend-type` with protocol dispatch.
 
@@ -105,6 +105,8 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Complexity**: Low (downgraded from Medium — graal-build-time automates this)
 **Priority**: Blocker
+
+**Done**: Added `(set! *warn-on-reflection* true)` to all source files that were missing it: `cuirq/state.clj`, `counter/core.clj`, `file_manager/core.clj`, `file_manager/dirs.clj`, `file_manager/tree.clj`. No reflection warnings at runtime. Added `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}` to `:native-image` alias `:extra-deps` in root `deps.edn`. Reflection metadata already captured by tracing agent in task 3.
 
 ### 5. AOT-compile all Clojure namespaces
 

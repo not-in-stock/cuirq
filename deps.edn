@@ -17,4 +17,5 @@
   :uberjar {:main-opts ["-m" "cuirq.build" "uberjar"]}
 
   :native-image {:extra-paths ["config"]
+                 :extra-deps {com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}}
                  :main-opts ["-m" "cuirq.build" "native-image"]}}}

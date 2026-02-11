@@ -5,6 +5,8 @@
   (:require [cuirq.core :as cuirq]
             [clojure.string :as str]))
 
+(set! *warn-on-reflection* true)
+
 (defonce ^:private app-state (atom {}))
 
 (defn get-state
