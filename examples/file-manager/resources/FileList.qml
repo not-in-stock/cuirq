@@ -216,46 +216,9 @@ Rectangle {
             }
         }
 
-        add: Transition {
-            ParallelAnimation {
-                NumberAnimation {
-                    property: "height"
-                    from: 0
-                    duration: theme.animExpandHeight
-                    easing.type: Easing.OutCubic
-                }
-                NumberAnimation {
-                    property: "opacity"
-                    from: 0
-                    to: 1
-                    duration: theme.animExpandFade
-                    easing.type: Easing.OutQuad
-                }
-            }
-        }
-        remove: Transition {
-            ParallelAnimation {
-                NumberAnimation {
-                    property: "height"
-                    to: 0
-                    duration: theme.animExpandHeight
-                    easing.type: Easing.InCubic
-                }
-                NumberAnimation {
-                    property: "opacity"
-                    to: 0
-                    duration: theme.animExpandFade
-                    easing.type: Easing.InQuad
-                }
-            }
-        }
-        displaced: Transition {
-            NumberAnimation {
-                properties: "x,y"
-                duration: theme.animExpandHeight
-                easing.type: Easing.OutCubic
-            }
-        }
+        add: ListAddTransition {}
+        remove: ListRemoveTransition {}
+        displaced: ListDisplacedTransition {}
 
         Text {
             anchors.centerIn: parent

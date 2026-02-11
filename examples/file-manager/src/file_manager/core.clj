@@ -19,6 +19,20 @@
 ;; Sort state — persists across navigation
 (defonce ^:private sort-state (atom {:field "name" :ascending true}))
 
+;; Current view mode: "grid", "list", or "columns"
+(defonce ^:private view-mode (atom "grid"))
+
+;; Miller columns pool size
+(def ^:private miller-pool-size 16)
+
+;; Miller columns state:
+;; {:columns [{:path "/..." :name "dirname" :selected-index -1} ...]
+;;  :active-count N}
+(defonce ^:private miller-state (atom {:columns [] :active-count 0}))
+
+;; Cache last data set on each miller model to avoid redundant updates
+(defonce ^:private last-miller-data (atom {}))
+
 (defn- refresh-file-list!
   "Rebuild the flat tree and push to model. Updates watcher paths."
   []
@@ -39,6 +53,28 @@
         (cuirq/watch-directories! paths)
         (cuirq/stop-directory-watch!)))))
 
+(defn- path->chain
+  "Build a chain of directory paths from / to the given path.
+   E.g. '/Users/foo/bar' → ['/' '/Users' '/Users/foo' '/Users/foo/bar']"
+  [^String path]
+  (let [parts (->> (.split path (File/separator))
+                   (remove empty?))]
+    (loop [remaining parts
+           acc-path ""
+           result ["/"]]
+      (if (empty? remaining)
+        result
+        (let [part (first remaining)
+              new-path (str acc-path "/" part)]
+          (recur (rest remaining)
+                 new-path
+                 (conj result new-path)))))))
+
+(defn- miller-model-key
+  "Return the keyword for miller column model at index i."
+  [i]
+  (keyword (str "mc" i)))
+
 (defn- build-breadcrumbs
   [^String path]
   (let [parts (->> (.split path (File/separator))
@@ -54,6 +90,163 @@
                  new-path
                  (conj result {:name part :path new-path})))))))
 
+(defn- push-miller-state!
+  "Push miller columns metadata to QML state."
+  [{:keys [columns active-count]}]
+  (let [cols-json (json/write-str
+                   (mapv (fn [col]
+                           {:name (:name col)
+                            :path (:path col)
+                            :selectedPath (or (:selected-path col) "")})
+                         columns))]
+    (state/update-state! assoc
+                         :millerActiveCount active-count
+                         :millerColumns cols-json)))
+
+(defn- populate-miller-model!
+  "Fill miller column model at index i with directory contents.
+   Skips update if data hasn't changed (dedup)."
+  [i ^String path]
+  (let [items (dirs/list-dir! path)]
+    (when (not= items (get @last-miller-data i))
+      (swap! last-miller-data assoc i items)
+      (models/update-data! (miller-model-key i) items "path"))))
+
+(defn- clear-miller-model!
+  "Reset dedup cache for miller column model at index i.
+   Does NOT clear the model data — remove transitions need old content for fade-out."
+  [i]
+  (swap! last-miller-data dissoc i))
+
+(defn miller-navigate-to!
+  "Navigate to a path in Miller columns mode.
+   Builds the full path chain and populates column models.
+   Expects a canonical path."
+  [^String path]
+  (let [dir (File. path)]
+    (when (.isDirectory dir)
+      (let [chain (path->chain path)
+            ;; If chain > pool-size, use sliding window (last N)
+            window (if (> (count chain) miller-pool-size)
+                     (vec (take-last miller-pool-size chain))
+                     chain)
+            active-count (count window)
+            columns (mapv (fn [p]
+                            {:path p
+                             :name (let [f (File. ^String p)]
+                                     (if (= p "/") "/" (.getName f)))
+                             :selected-index -1})
+                          window)]
+        ;; Set selected-index for each column (which child leads to next column)
+        (let [columns-with-sel
+              (vec (map-indexed
+                    (fn [i col]
+                      (if (< (inc i) active-count)
+                        ;; Find index of next column's path in this column's listing
+                        (let [next-path (:path (nth columns (inc i)))
+                              items (dirs/list-dir! (:path col))
+                              idx (or (first (keep-indexed
+                                              (fn [j item]
+                                                (when (= (:path item) next-path) j))
+                                              items))
+                                      -1)]
+                          (assoc col :selected-index idx :selected-path next-path))
+                        col))
+                    columns))]
+          ;; Populate models
+          (doseq [i (range active-count)]
+            (populate-miller-model! i (:path (nth columns-with-sel i))))
+          ;; Clear unused models
+          (doseq [i (range active-count miller-pool-size)]
+            (clear-miller-model! i))
+          ;; Update state
+          (let [new-state {:columns columns-with-sel :active-count active-count}]
+            (reset! miller-state new-state)
+            (push-miller-state! new-state))
+          ;; Update currentPath & breadcrumbs to the navigated path
+          (state/update-state! assoc
+                               :currentPath path
+                               :breadcrumbs (json/write-str (build-breadcrumbs path))
+                               :itemCount (count (dirs/list-dir! path)))
+          ;; Watch visible directories
+          (let [visible-dirs (set (map :path columns-with-sel))
+                paths (dirs/active-paths)
+                all-paths (into visible-dirs paths)]
+            (dirs/retain-paths! visible-dirs)
+            (if (seq visible-dirs)
+              (cuirq/watch-directories! (vec visible-dirs))
+              (cuirq/stop-directory-watch!))))))))
+
+(defn- miller-select!
+  "Handle selection in Miller columns.
+   col-idx: which column was clicked
+   item-index: which item in that column"
+  [col-idx item-index]
+  (let [{:keys [columns active-count]} @miller-state
+        col (nth columns col-idx)
+        items (dirs/list-dir! (:path col))
+        item (nth items item-index nil)]
+    (when item
+      (if (:isDir item)
+        ;; Directory: open next column, clear columns beyond
+        (let [next-col-idx (inc col-idx)
+              item-path (:path item)]
+          (if (>= next-col-idx miller-pool-size)
+            ;; Pool exhausted — slide window via full navigate
+            (miller-navigate-to! item-path)
+            ;; Room in pool — populate in place
+            (let [new-active (inc next-col-idx)]
+              ;; Populate next column
+              (populate-miller-model! next-col-idx item-path)
+              ;; Clear columns beyond
+              (doseq [i (range new-active miller-pool-size)]
+                (clear-miller-model! i))
+              ;; Update miller state
+              (let [;; Keep columns up to col-idx, update selected-index
+                    kept (subvec columns 0 (inc col-idx))
+                    kept (-> kept
+                             (assoc-in [col-idx :selected-index] item-index)
+                             (assoc-in [col-idx :selected-path] item-path))
+                    ;; Add new column
+                    new-col {:path item-path
+                             :name (.getName (File. ^String item-path))
+                             :selected-index -1
+                             :selected-path ""}
+                    new-columns (conj kept new-col)
+                    new-state {:columns new-columns :active-count new-active}]
+                (reset! miller-state new-state)
+                (push-miller-state! new-state)
+                ;; Update currentPath & breadcrumbs to the deepest directory
+                (state/update-state! assoc
+                                     :currentPath item-path
+                                     :breadcrumbs (json/write-str (build-breadcrumbs item-path))
+                                     :itemCount (count (dirs/list-dir! item-path)))
+                ;; Update watcher
+                (let [visible-dirs (set (map :path new-columns))]
+                  (dirs/retain-paths! visible-dirs)
+                  (cuirq/watch-directories! (vec visible-dirs)))))))
+        ;; File: just update selection, clear columns right of current
+        (let [new-active (inc col-idx)]
+          (doseq [i (range new-active miller-pool-size)]
+            (clear-miller-model! i))
+          (let [kept (subvec columns 0 (inc col-idx))
+                kept (-> kept
+                         (assoc-in [col-idx :selected-index] item-index)
+                         (assoc-in [col-idx :selected-path] (:path item)))
+                new-state {:columns kept :active-count new-active}]
+            (reset! miller-state new-state)
+            (push-miller-state! new-state)))))))
+
+(defn- refresh-miller-column!
+  "Re-read a specific miller column whose directory changed.
+   The path should already be invalidated in the cache."
+  [changed-path]
+  (let [{:keys [columns active-count]} @miller-state]
+    (doseq [i (range active-count)]
+      (let [col (nth columns i)]
+        (when (= (:path col) changed-path)
+          (populate-miller-model! i changed-path))))))
+
 (defn navigate-to!
   "Navigate to a directory path."
   [^String path]
@@ -67,25 +260,34 @@
                                (-> h
                                    (update :back conj current-path)
                                    (assoc :forward [])))))
-        ;; Reset tree state for new root
-        (tree/collapse-all!)
-        (dirs/invalidate-all!)
-        ;; List directory and update model
-        (let [items (tree/build-flat-list canonical @sort-state)]
-          (reset! last-listing items)
-          (models/set-data! :files items)
-          ;; Update state
-          (state/set-state!
-           {:currentPath  canonical
-            :canGoBack    (boolean (seq (:back @nav-history)))
-            :canGoForward (boolean (seq (:forward @nav-history)))
-            :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs canonical))})
-          ;; Watch for filesystem changes
-          (let [paths (dirs/active-paths)]
-            (if (seq paths)
-              (cuirq/watch-directories! paths)
-              (cuirq/start-directory-watch! canonical))))))))
+        (if (= @view-mode "columns")
+          ;; Miller columns mode
+          (do
+            (dirs/invalidate-all!)
+            (miller-navigate-to! canonical)
+            (state/update-state! assoc
+                                 :currentPath canonical
+                                 :canGoBack (boolean (seq (:back @nav-history)))
+                                 :canGoForward (boolean (seq (:forward @nav-history)))
+                                 :breadcrumbs (json/write-str (build-breadcrumbs canonical))
+                                 :itemCount (count (dirs/list-dir! canonical))))
+          ;; Grid/list mode
+          (do
+            (tree/collapse-all!)
+            (dirs/invalidate-all!)
+            (let [items (tree/build-flat-list canonical @sort-state)]
+              (reset! last-listing items)
+              (models/set-data! :files items)
+              (state/set-state!
+               {:currentPath  canonical
+                :canGoBack    (boolean (seq (:back @nav-history)))
+                :canGoForward (boolean (seq (:forward @nav-history)))
+                :itemCount    (count items)
+                :breadcrumbs  (json/write-str (build-breadcrumbs canonical))})
+              (let [paths (dirs/active-paths)]
+                (if (seq paths)
+                  (cuirq/watch-directories! paths)
+                  (cuirq/start-directory-watch! canonical))))))))))
 
 (defn go-back!
   []
@@ -97,21 +299,31 @@
                              (-> h
                                  (update :back pop)
                                  (update :forward conj current))))
-        (tree/collapse-all!)
         (dirs/invalidate-all!)
-        (let [items (tree/build-flat-list prev @sort-state)]
-          (reset! last-listing items)
-          (models/set-data! :files items)
-          (state/set-state!
-           {:currentPath  prev
-            :canGoBack    (boolean (seq (:back @nav-history)))
-            :canGoForward (boolean (seq (:forward @nav-history)))
-            :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs prev))})
-          (let [paths (dirs/active-paths)]
-            (if (seq paths)
-              (cuirq/watch-directories! paths)
-              (cuirq/start-directory-watch! prev))))))))
+        (if (= @view-mode "columns")
+          (do
+            (miller-navigate-to! prev)
+            (state/update-state! assoc
+                                 :currentPath prev
+                                 :canGoBack (boolean (seq (:back @nav-history)))
+                                 :canGoForward (boolean (seq (:forward @nav-history)))
+                                 :breadcrumbs (json/write-str (build-breadcrumbs prev))
+                                 :itemCount (count (dirs/list-dir! prev))))
+          (do
+            (tree/collapse-all!)
+            (let [items (tree/build-flat-list prev @sort-state)]
+              (reset! last-listing items)
+              (models/set-data! :files items)
+              (state/set-state!
+               {:currentPath  prev
+                :canGoBack    (boolean (seq (:back @nav-history)))
+                :canGoForward (boolean (seq (:forward @nav-history)))
+                :itemCount    (count items)
+                :breadcrumbs  (json/write-str (build-breadcrumbs prev))})
+              (let [paths (dirs/active-paths)]
+                (if (seq paths)
+                  (cuirq/watch-directories! paths)
+                  (cuirq/start-directory-watch! prev))))))))))
 
 (defn go-forward!
   []
@@ -123,21 +335,31 @@
                              (-> h
                                  (update :forward pop)
                                  (update :back conj current))))
-        (tree/collapse-all!)
         (dirs/invalidate-all!)
-        (let [items (tree/build-flat-list next-path @sort-state)]
-          (reset! last-listing items)
-          (models/set-data! :files items)
-          (state/set-state!
-           {:currentPath  next-path
-            :canGoBack    (boolean (seq (:back @nav-history)))
-            :canGoForward (boolean (seq (:forward @nav-history)))
-            :itemCount    (count items)
-            :breadcrumbs  (json/write-str (build-breadcrumbs next-path))})
-          (let [paths (dirs/active-paths)]
-            (if (seq paths)
-              (cuirq/watch-directories! paths)
-              (cuirq/start-directory-watch! next-path))))))))
+        (if (= @view-mode "columns")
+          (do
+            (miller-navigate-to! next-path)
+            (state/update-state! assoc
+                                 :currentPath next-path
+                                 :canGoBack (boolean (seq (:back @nav-history)))
+                                 :canGoForward (boolean (seq (:forward @nav-history)))
+                                 :breadcrumbs (json/write-str (build-breadcrumbs next-path))
+                                 :itemCount (count (dirs/list-dir! next-path))))
+          (do
+            (tree/collapse-all!)
+            (let [items (tree/build-flat-list next-path @sort-state)]
+              (reset! last-listing items)
+              (models/set-data! :files items)
+              (state/set-state!
+               {:currentPath  next-path
+                :canGoBack    (boolean (seq (:back @nav-history)))
+                :canGoForward (boolean (seq (:forward @nav-history)))
+                :itemCount    (count items)
+                :breadcrumbs  (json/write-str (build-breadcrumbs next-path))})
+              (let [paths (dirs/active-paths)]
+                (if (seq paths)
+                  (cuirq/watch-directories! paths)
+                  (cuirq/start-directory-watch! next-path))))))))))
 
 (defn- resolve-sidebar-location
   [^String key]
@@ -163,9 +385,11 @@
       (println (str " nREPL server started on port " port))
 
       (cuirq/with-qt ["-platform" "cocoa"]
-        ;; Create files model
+        ;; Create files model + miller column pool
         (println " [1/4] Creating models...")
         (models/create-model! :files)
+        (doseq [i (range miller-pool-size)]
+          (models/create-model! (miller-model-key i)))
 
         ;; Initialize state
         (println " [2/4] Initializing state...")
@@ -173,7 +397,10 @@
                            :canGoBack "false"
                            :canGoForward "false"
                            :itemCount 0
-                           :breadcrumbs "[]"})
+                           :breadcrumbs "[]"
+                           :viewMode "grid"
+                           :millerActiveCount 0
+                           :millerColumns "[]"})
 
         ;; Register signal handlers
         (println " [3/4] Registering signal handlers...")
@@ -208,9 +435,30 @@
                           (fn [_ json-args]
                             (let [args (json/read-str json-args)
                                   changed-path (first args)]
-                              ;; Invalidate the changed dir and rebuild
                               (dirs/invalidate! changed-path)
-                              (refresh-file-list!))))
+                              (if (= @view-mode "columns")
+                                (refresh-miller-column! changed-path)
+                                (refresh-file-list!)))))
+
+        (cuirq/on-signal! :millerSelect
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  ->long #(if (string? %) (Long/parseLong %) (long %))
+                                  col-idx (->long (first args))
+                                  item-index (->long (second args))]
+                              (miller-select! col-idx item-index))))
+
+        (cuirq/on-signal! :viewModeChanged
+                          (fn [_ json-args]
+                            (let [args (json/read-str json-args)
+                                  mode (first args)]
+                              (reset! view-mode mode)
+                              (state/update-state! assoc :viewMode mode)
+                              (when (= mode "columns")
+                                (let [current-path (:currentPath (state/get-state))]
+                                  (when (and current-path (not= current-path ""))
+                                    (dirs/invalidate-all!)
+                                    (miller-navigate-to! current-path)))))))
 
         (cuirq/on-signal! :themeChanged
                           (fn [_ json-args]

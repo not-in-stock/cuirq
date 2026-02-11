@@ -61,6 +61,9 @@ QtObject {
     readonly property int listItemSpacing: 1
     readonly property int listHeaderHeight: 28
     readonly property int statusBarHeight: 28
+    readonly property int millerColumnWidth: 220
+    readonly property int millerItemHeight: 28
+    readonly property color millerSelection: darkMode ? Qt.rgba(0.2, 0.4, 0.8, 0.3) : Qt.rgba(0.2, 0.4, 0.8, 0.15)
 
     // Scrollbar
     readonly property color scrollbarColor: darkMode ? Qt.rgba(1, 1, 1, 0.4) : Qt.rgba(0, 0, 0, 0.35)

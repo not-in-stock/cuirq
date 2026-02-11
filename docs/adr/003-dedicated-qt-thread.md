@@ -1,7 +1,7 @@
 # ADR-003: Dedicated Thread for Qt/Panama Calls
 
 ## Status
-Proposed
+Partially Implemented
 
 ## Context
 
@@ -14,10 +14,12 @@ cuirq bridges Clojure (JVM) and Qt/QML (C++) via Panama FFM. Qt GUI operations m
 
 ### Current Mitigation
 
-The C++ side partially handles this:
+The C++ side handles thread marshaling per-function:
 - `StateObject::setProp()` uses `QQmlPropertyMap::insert()` which internally posts to the Qt event loop via `QueuedConnection`
 - macOS `QTimer::singleShot(0, ...)` defers Cocoa-specific calls
-- But `JvmListModel::setJsonData()`, `beginResetModel()`/`endResetModel()`, and other model operations are called directly — potentially from wrong threads
+- `set_model_data()`, `update_model_data()`, `clear_model()` in `qt_engine.cpp` check `QThread::currentThread() != model->thread()` and marshal via `QMetaObject::invokeMethod(..., Qt::QueuedConnection)` when needed (added 2026-02-11)
+
+This ad-hoc approach works but duplicates the same thread-check pattern in every function. The centralized dispatch queue below would replace all per-function checks with a single mechanism.
 
 ### Problems
 
@@ -184,6 +186,17 @@ Signal upcalls arrive on the Qt main thread. Handlers should **not** block it. T
 1. Batch updates when possible (diff state, send only changes)
 2. Log errors in Qt thread callbacks with clear context
 3. State atom is the source of truth; Qt thread always applies latest state
+
+## Progress
+
+### Done
+- Per-function thread marshaling in `qt_engine.cpp` for `set_model_data`, `update_model_data`, `clear_model` (same `QThread::currentThread()` + `QueuedConnection` pattern as `StateObject::setProp`)
+
+### Remaining
+- Centralized `cuirq_invoke_on_qt_thread` C++ function
+- Java `QtThread` dispatcher
+- Clojure `cuirq.qt/invoke!` wrapper
+- Migrate existing per-function checks to centralized dispatch
 
 ## References
 
