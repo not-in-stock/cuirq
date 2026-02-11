@@ -108,7 +108,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Done**: Added `(set! *warn-on-reflection* true)` to all source files that were missing it: `cuirq/state.clj`, `counter/core.clj`, `file_manager/core.clj`, `file_manager/dirs.clj`, `file_manager/tree.clj`. No reflection warnings at runtime. Added `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}` to `:native-image` alias `:extra-deps` in root `deps.edn`. Reflection metadata already captured by tracing agent in task 3.
 
-### 5. AOT-compile all Clojure namespaces
+### 5. AOT-compile all Clojure namespaces [Done]
 
 **Problem**: Native-image analyzes `.class` files. Clojure namespaces must be AOT-compiled before `native-image` runs.
 
@@ -119,6 +119,8 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Complexity**: Medium
 **Priority**: Blocker
+
+**Done**: Added `bb aot <example>` task. Compiles transitively via `(compile 'ns)` with output to `build/aot/<example>/`. Counter: 107 class files (`clojure.*`, `cuirq.*`, `counter.*`). File-manager: 189 class files (`clojure.*`, `cuirq.*`, `file_manager.*`). No top-level side effects — AOT completes cleanly without launching Qt or I/O.
 
 ### 6. Native-image build configuration
 

@@ -92,6 +92,38 @@
   {:doc "Start nREPL server on port 7888"
    :task (shell "clj -M:dev -m nrepl.cmdline --port 7888 --middleware '[cider.nrepl/cider-middleware]'")}
 
+  ;; AOT-compile Clojure namespaces for native-image
+  aot
+  {:doc "AOT-compile example for native-image: bb aot <example-name>"
+   :requires ([babashka.fs :as fs])
+   :task (let [example (or (first *command-line-args*) "counter")
+               example-dir (str "examples/" example)
+               main-ns (case example
+                         "counter" "counter.core"
+                         "file-manager" "file-manager.core"
+                         (do (println (str "Unknown example: " example))
+                             (System/exit 1)))]
+           (when-not (fs/exists? example-dir)
+             (println (str "Error: Example '" example "' not found"))
+             (System/exit 1))
+
+           (let [project-root (System/getProperty "user.dir")
+                 lib-path (str project-root "/build/lib")
+                 classes-path (str project-root "/build/classes")
+                 aot-dir (str project-root "/build/aot/" example)]
+             (fs/create-dirs aot-dir)
+             (println (str "AOT-compiling " main-ns "..."))
+             (println (str "Output: " aot-dir))
+             (shell {:dir example-dir}
+                    (str "clj "
+                         "-J--enable-native-access=ALL-UNNAMED "
+                         "-J-Djava.library.path=" lib-path " "
+                         "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\" \"" aot-dir "\"]}}}' "
+                         "-M:bridge "
+                         "-e \"(binding [*compile-path* \\\"" aot-dir "\\\"] (compile (quote " main-ns ")))\""))
+             (println "AOT compilation complete")
+             (println (str "Classes: " (count (fs/glob aot-dir "**/*.class")) " files"))))}
+
   ;; Run with GraalVM tracing agent to collect native-image config
   trace
   {:doc "Run example with tracing agent: bb trace <example-name>"
