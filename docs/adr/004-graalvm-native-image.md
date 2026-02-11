@@ -45,7 +45,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 ## Tasks
 
-### 1. Separate nREPL into dev-only entry point
+### 1. Separate nREPL into dev-only entry point [Done]
 
 **Problem**: `file-manager/core.clj` and `counter/core.clj` hardcode nREPL/CIDER imports and `start-server` calls. nREPL uses `eval`, reflection, and dynamic class loading — incompatible with native-image.
 
@@ -57,6 +57,8 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Complexity**: Low
 **Priority**: Blocker — native-image will fail to compile with nREPL on classpath
+
+**Done**: nREPL/CIDER removed from core namespaces and `:deps`. Dev wrappers created at `counter/dev.clj` (port 7888) and `file_manager/dev.clj` (port 7889). nREPL deps moved to `:dev` `:extra-deps` in both example `deps.edn` and root `deps.edn`. `bb dev` uses `-M:dev:bridge`.
 
 ### 2. Defer Panama FFM initialization to runtime
 
