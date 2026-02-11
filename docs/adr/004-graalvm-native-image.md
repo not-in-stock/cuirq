@@ -156,6 +156,40 @@ Built a standalone spike with a tiny C library (not Qt) to isolate Panama/GraalV
 - `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}`
 - `-H:+ForeignAPISupport -H:+UnlockExperimentalVMOptions --enable-native-access=ALL-UNNAMED`
 
+### 8. macOS `.app` bundle packaging
+
+**Problem**: The native binary requires external dependencies at runtime:
+- `libqmlbridge.dylib` — via `-Djava.library.path`
+- Qt QML plugins — via `QML2_IMPORT_PATH` (QtQuick.Controls, Qt5Compat, etc.)
+- Qt platform plugins — via `QT_PLUGIN_PATH` (libqcocoa, libqsvg)
+- QML source files — resolved relative to working directory
+
+Without bundling, the binary only works inside `nix develop` with the correct env vars.
+
+**Action**:
+- Create `bb bundle <example>` task that produces `CuirqFileManager.app/` (or `CuirqCounter.app/`)
+- Standard macOS bundle layout:
+  ```
+  CuirqFileManager.app/
+    Contents/
+      Info.plist
+      MacOS/
+        cuirq-file-manager          # native binary
+        libqmlbridge.dylib          # C++ bridge
+      Resources/
+        *.qml                       # QML files
+        qml/shell.qml               # shell
+      Frameworks/                   # or PlugIns/
+        qt-6/qml/QtQuick/...        # Qt QML plugins
+        qt-6/plugins/platforms/...   # Qt platform plugins
+  ```
+- Patch library paths with `install_name_tool` / `@rpath` so the binary finds `libqmlbridge.dylib` relative to itself
+- Set `QML2_IMPORT_PATH`, `QT_PLUGIN_PATH`, and QML content path relative to the bundle via `Info.plist` or startup wrapper
+- Generate `Info.plist` with `CFBundleIdentifier`, `CFBundleName`, app icon placeholder
+
+**Complexity**: Medium
+**Priority**: Nice-to-have — binary works standalone with env vars, bundle needed for distribution
+
 ## Consequences
 
 ### Positive
