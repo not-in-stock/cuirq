@@ -1,6 +1,6 @@
 [
   {
-    "name": "qml.Bridge",
+    "name": "qml.PanamaBridge",
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,
@@ -9,11 +9,20 @@
     "allPublicFields": true
   },
   {
-    "name": "qml.Bridge$SignalHandler",
+    "name": "qml.PanamaBridge$SignalHandler",
     "allDeclaredConstructors": true,
     "allPublicConstructors": true,
     "allDeclaredMethods": true,
     "allPublicMethods": true
+  },
+  {
+    "name": "qml.QtThread",
+    "allDeclaredConstructors": true,
+    "allPublicConstructors": true,
+    "allDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredFields": true,
+    "allPublicFields": true
   }
 ]
 

@@ -60,7 +60,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Done**: nREPL/CIDER removed from core namespaces and `:deps`. Dev wrappers created at `counter/dev.clj` (port 7888) and `file_manager/dev.clj` (port 7889). nREPL deps moved to `:dev` `:extra-deps` in both example `deps.edn` and root `deps.edn`. `bb dev` uses `-M:dev:bridge`.
 
-### 2. Defer Panama FFM initialization to runtime
+### 2. Defer Panama FFM initialization to runtime [Done]
 
 **Problem**: `PanamaBridge` and `QtThread` initialize `MethodHandle` downcalls, `SymbolLookup`, and upcall stubs in `static {}` blocks. Native-image cannot serialize native addresses into the image heap.
 
@@ -73,6 +73,8 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Complexity**: Low
 **Priority**: Blocker
+
+**Done**: Created `config/META-INF/native-image/cuirq/native-image.properties` with `--initialize-at-run-time=qml.PanamaBridge,qml.QtThread`. Auto-discovered via `:native-image` alias (`{:extra-paths ["config"]}`). Also updated `reflect-config.json` — renamed `qml.Bridge` → `qml.PanamaBridge`, added `qml.QtThread`.
 
 ### 3. Register FFM descriptors for native-image
 
