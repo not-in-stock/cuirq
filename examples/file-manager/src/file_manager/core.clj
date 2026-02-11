@@ -451,14 +451,20 @@
         (cuirq/on-signal! :viewModeChanged
                           (fn [_ json-args]
                             (let [args (json/read-str json-args)
-                                  mode (first args)]
+                                  mode (first args)
+                                  current-path (:currentPath (state/get-state))]
                               (reset! view-mode mode)
                               (state/update-state! assoc :viewMode mode)
-                              (when (= mode "columns")
-                                (let [current-path (:currentPath (state/get-state))]
-                                  (when (and current-path (not= current-path ""))
-                                    (dirs/invalidate-all!)
-                                    (miller-navigate-to! current-path)))))))
+                              (when (and current-path (not= current-path ""))
+                                (if (= mode "columns")
+                                  (do (dirs/invalidate-all!)
+                                      (miller-navigate-to! current-path))
+                                  (do (tree/collapse-all!)
+                                      (dirs/invalidate-all!)
+                                      (let [items (tree/build-flat-list current-path @sort-state)]
+                                        (reset! last-listing items)
+                                        (models/set-data! :files items)
+                                        (state/update-state! assoc :itemCount (count items)))))))))
 
         (cuirq/on-signal! :themeChanged
                           (fn [_ json-args]
