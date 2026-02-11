@@ -5,8 +5,6 @@
            [java.text SimpleDateFormat]
            [java.util Date]))
 
-(set! *warn-on-reflection* true)
-
 ;; Directory cache: {path → [items]}
 (defonce !dir-cache (atom {}))
 

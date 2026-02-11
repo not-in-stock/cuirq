@@ -3,8 +3,6 @@
   (:require [clojure.data.json :as json])
   (:import [qml PanamaBridge]))
 
-(set! *warn-on-reflection* true)
-
 (defn create-model!
   "Create a list model and register it as a QML context property.
 

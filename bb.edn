@@ -164,6 +164,66 @@
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
                          "-M:run:bridge"))))}
 
+  ;; Build native binary with GraalVM native-image
+  native
+  {:doc "Build native binary: bb native <example-name>"
+   :requires ([babashka.fs :as fs]
+              [babashka.process :as p]
+              [clojure.string :as str])
+   :task (let [example (or (first *command-line-args*) "counter")
+               example-dir (str "examples/" example)
+               main-class (case example
+                            "counter" "counter.core"
+                            "file-manager" "file_manager.core"
+                            (do (println (str "Unknown example: " example))
+                                (System/exit 1)))]
+           (when-not (fs/exists? example-dir)
+             (println (str "Error: Example '" example "' not found"))
+             (System/exit 1))
+           (when-not (fs/which "native-image")
+             (println "Error: native-image not found. Run inside 'nix develop'.")
+             (System/exit 1))
+
+           ;; Ensure AOT classes exist
+           (let [project-root (System/getProperty "user.dir")
+                 aot-dir (str project-root "/build/aot/" example)
+                 classes-path (str project-root "/build/classes")
+                 config-dir (str project-root "/config")
+                 lib-path (str project-root "/build/lib")
+                 output-dir (str project-root "/build/native")
+                 output-bin (str output-dir "/cuirq-" example)]
+             (when-not (fs/exists? aot-dir)
+               (println "AOT classes not found. Run 'bb aot " example "' first.")
+               (System/exit 1))
+             (fs/create-dirs output-dir)
+
+             ;; Get deps classpath from the example + graal-build-time from root :native-image alias
+             (let [deps-cp (str/trim (:out (deref (p/process {:dir example-dir :out :string :err :inherit}
+                                                              "clj" "-Spath"))))
+                   graal-cp (str/trim (:out (deref (p/process {:dir project-root :out :string :err :inherit}
+                                                               "clj" "-Sdeps" "{:deps {com.github.clj-easy/graal-build-time {:mvn/version \"1.0.5\"}}}" "-Spath"))))
+                   ;; Full classpath: AOT classes + bridge classes + config + deps + graal-build-time
+                   full-cp (str/join ":" [aot-dir classes-path config-dir deps-cp graal-cp])]
+
+               (println (str "Building native binary for " example "..."))
+               (println (str "Output: " output-bin))
+               (println "")
+
+               (shell (str "native-image "
+                           "--no-fallback "
+                           "-H:+ForeignAPISupport "
+                           "--enable-native-access=ALL-UNNAMED "
+                           "--features=clj_easy.graal_build_time.InitClojureClasses "
+                           "-Djava.library.path=" lib-path " "
+                           "-cp " full-cp " "
+                           "-o " output-bin " "
+                           main-class))
+
+               (println "")
+               (println (str "Native binary built: " output-bin))
+               (let [size-mb (/ (fs/size (str output-bin)) 1048576.0)]
+                 (println (str "Size: " (format "%.1f" size-mb) " MB"))))))}
+
   ;; Development REPL with example loaded
   dev
   {:doc "Start development REPL with counter example: bb dev <example-name>"

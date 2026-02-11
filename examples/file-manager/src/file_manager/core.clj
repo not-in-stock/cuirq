@@ -8,8 +8,6 @@
   (:import [java.io File])
   (:gen-class))
 
-(set! *warn-on-reflection* true)
-
 ;; Navigation history
 (defonce nav-history (atom {:back [] :forward []}))
 

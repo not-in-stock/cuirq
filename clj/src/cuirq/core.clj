@@ -3,8 +3,6 @@
   (:require [clojure.data.json])
   (:import [qml PanamaBridge PanamaBridge$SignalHandler]))
 
-(set! *warn-on-reflection* true)
-
 (defmacro with-qt
   "Initialize Qt, execute body, and ensure cleanup.
    Example:

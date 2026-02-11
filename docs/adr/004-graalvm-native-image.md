@@ -106,7 +106,7 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 **Complexity**: Low (downgraded from Medium — graal-build-time automates this)
 **Priority**: Blocker
 
-**Done**: Added `(set! *warn-on-reflection* true)` to all source files that were missing it: `cuirq/state.clj`, `counter/core.clj`, `file_manager/core.clj`, `file_manager/dirs.clj`, `file_manager/tree.clj`. No reflection warnings at runtime. Added `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}` to `:native-image` alias `:extra-deps` in root `deps.edn`. Reflection metadata already captured by tracing agent in task 3.
+**Done**: Added `com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}` to `:native-image` alias `:extra-deps` in root `deps.edn`. Reflection metadata already captured by tracing agent in task 3. Note: `(set! *warn-on-reflection* true)` was initially added to source files but later removed — `graal-build-time` registers all Clojure packages for build-time class initialization, and `set!` on `*warn-on-reflection*` in third-party jars (clojure.data.json, clojure.pprint) conflicts with build-time init. The `--initialize-at-run-time` for `clojure.data.json__init` in `native-image.properties` handles this specific case.
 
 ### 5. AOT-compile all Clojure namespaces [Done]
 
@@ -122,28 +122,19 @@ nREPL and CIDER are excluded from the native binary entirely. Development workfl
 
 **Done**: Added `bb aot <example>` task. Compiles transitively via `(compile 'ns)` with output to `build/aot/<example>/`. Counter: 107 class files (`clojure.*`, `cuirq.*`, `counter.*`). File-manager: 189 class files (`clojure.*`, `cuirq.*`, `file_manager.*`). No top-level side effects — AOT completes cleanly without launching Qt or I/O.
 
-### 6. Native-image build configuration
+### 6. Native-image build configuration [Done]
 
 **Action**:
-- Create `native-image.properties` or `bb native` task:
-  ```
-  native-image \
-    --no-fallback \
-    -H:+ForeignAPISupport \
-    -H:+UnlockExperimentalVMOptions \
-    --enable-native-access=ALL-UNNAMED \
-    --features=clj_easy.graal_build_time.InitClojureClasses \
-    --initialize-at-run-time=qml.PanamaBridge,qml.QtThread \
-    -H:ConfigurationFileDirectories=native-config/ \
-    -Djava.library.path=build/lib \
-    -o cuirq-file-manager \
-    file_manager.core
-  ```
-- Handle macOS-specific: `-XstartOnFirstThread` equivalent (needs investigation)
-- Bundle `libqmlbridge.dylib` alongside the binary
+- Create `bb native <example>` task that assembles classpath (AOT classes + bridge classes + deps + graal-build-time) and invokes `native-image`
+- Use `--features=clj_easy.graal_build_time.InitClojureClasses` for build-time Clojure class initialization
+- `--initialize-at-run-time` for `qml.PanamaBridge`, `qml.QtThread`, `clojure.data.json__init` (via `native-image.properties`)
+- `-H:+ForeignAPISupport --enable-native-access=ALL-UNNAMED` for Panama FFM
+- Tracing agent metadata in `config/META-INF/native-image/cuirq/` auto-discovered via classpath
 
-**Complexity**: Medium — platform-specific issues expected
+**Complexity**: Medium — required iteration to resolve `graal-build-time` vs `set!` conflict
 **Priority**: Blocker
+
+**Done**: Added `bb native <example>` task. Builds 48 MB native binary for counter example (1m 23s on M-series Mac). Binary starts correctly: Clojure runtime initializes, Panama FFM bridge loads `libqmlbridge.dylib`, Qt creates window and loads QML. Requires `nix develop` for GraalVM and `QML2_IMPORT_PATH`/`QT_PLUGIN_PATH` env vars for Qt plugin discovery at runtime. Key finding: `graal-build-time` build-time init works correctly when source files don't use `(set! *warn-on-reflection* true)` — third-party conflicts (clojure.data.json) handled via `--initialize-at-run-time` in `native-image.properties`.
 
 ### 7. Spike: minimal Panama + Clojure native-image [Works]
 
@@ -188,8 +179,13 @@ Built a standalone spike with a tiny C library (not Qt) to isolate Panama/GraalV
 
 ## References
 
+### GraalVM
 - [FFM API in GraalVM Native Image (JDK 25)](https://www.graalvm.org/jdk25/reference-manual/native-image/native-code-interoperability/ffm-api/)
 - [GraalVM 25 Release Notes](https://www.graalvm.org/release-notes/JDK_25/)
-- [clj-easy/graal-config](https://github.com/clj-easy/graal-config) — community Clojure reflection configs
-- [Clojure + GraalVM Native Image patterns](https://softwarepatternslexicon.com/patterns-clojure/20/17/)
 - [GraalVM FFM support tracking issue](https://github.com/oracle/graal/issues/8113)
+
+### Clojure + GraalVM (clj-easy ecosystem)
+- [clj-easy/graal-docs](https://github.com/clj-easy/graal-docs) — comprehensive notes on GraalVM + Clojure gotchas
+- [clj-easy/graal-build-time](https://github.com/clj-easy/graal-build-time) — automatic build-time initialization for Clojure classes
+- [clj-easy/graalvm-clojure](https://github.com/clj-easy/graalvm-clojure) — Clojure library compatibility matrix for GraalVM
+- [clj-easy/graal-config](https://github.com/clj-easy/graal-config) — ready-made native-image configs for popular Clojure libraries
