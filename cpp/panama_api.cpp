@@ -103,4 +103,12 @@ void cuirq_set_vibrancy_always_active(bool always) {
     cuirq::set_vibrancy_always_active(always);
 }
 
+void cuirq_invoke_on_qt_thread(cuirq_qt_callback_t fn, long ctx) {
+    cuirq::invoke_on_qt_thread(fn, ctx);
+}
+
+void cuirq_invoke_on_qt_thread_sync(cuirq_qt_callback_t fn, long ctx) {
+    cuirq::invoke_on_qt_thread_sync(fn, ctx);
+}
+
 } // extern "C"

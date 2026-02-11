@@ -1,7 +1,7 @@
 # ADR-003: Dedicated Thread for Qt/Panama Calls
 
 ## Status
-Partially Implemented
+Implemented
 
 ## Context
 
@@ -190,13 +190,11 @@ Signal upcalls arrive on the Qt main thread. Handlers should **not** block it. T
 ## Progress
 
 ### Done
-- Per-function thread marshaling in `qt_engine.cpp` for `set_model_data`, `update_model_data`, `clear_model` (same `QThread::currentThread()` + `QueuedConnection` pattern as `StateObject::setProp`)
-
-### Remaining
-- Centralized `cuirq_invoke_on_qt_thread` C++ function
-- Java `QtThread` dispatcher
-- Clojure `cuirq.qt/invoke!` wrapper
-- Migrate existing per-function checks to centralized dispatch
+- Centralized `cuirq_invoke_on_qt_thread` / `cuirq_invoke_on_qt_thread_sync` C++ functions in `qt_engine.cpp` + `panama_api.cpp`
+- Java `QtThread` dispatcher (`java/qml/QtThread.java`) with persistent upcall stub, task map, `invoke()` and `invokeSync()`
+- All `PanamaBridge` public methods dispatched through `QtThread` (fire-and-forget for void ops, sync for return values)
+- Removed per-function thread checks from `set_model_data`, `update_model_data`, `clear_model` — now redundant
+- Lifecycle (`initialize`, `exec`, `shutdown`) and signal setup (`registerSignalHandler`, `ensureSignalCallback`) kept undispatched
 
 ## References
 

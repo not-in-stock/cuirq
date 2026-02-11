@@ -156,6 +156,28 @@ bool initialize(int argc, char* argv[]) {
     return true;
 }
 
+void invoke_on_qt_thread(qt_callback_t fn, long ctx) {
+    if (!g_app) return;
+    if (QThread::currentThread() == g_app->thread()) {
+        fn(ctx);
+    } else {
+        QMetaObject::invokeMethod(g_app, [fn, ctx]() {
+            fn(ctx);
+        }, Qt::QueuedConnection);
+    }
+}
+
+void invoke_on_qt_thread_sync(qt_callback_t fn, long ctx) {
+    if (!g_app) return;
+    if (QThread::currentThread() == g_app->thread()) {
+        fn(ctx);
+    } else {
+        QMetaObject::invokeMethod(g_app, [fn, ctx]() {
+            fn(ctx);
+        }, Qt::BlockingQueuedConnection);
+    }
+}
+
 void set_app_name(const char* name) {
     if (!g_app) return;
     QString appName = QString::fromUtf8(name);
@@ -313,14 +335,7 @@ void set_model_data(const char* name, const char* json_data) {
         std::cerr << "[CPP] ERROR: Model not found: " << name << std::endl;
         return;
     }
-    if (QThread::currentThread() != model->thread()) {
-        QString data = QString::fromUtf8(json_data);
-        QMetaObject::invokeMethod(model, [model, data]() {
-            model->setJsonData(data);
-        }, Qt::QueuedConnection);
-    } else {
-        model->setJsonData(QString::fromUtf8(json_data));
-    }
+    model->setJsonData(QString::fromUtf8(json_data));
 }
 
 void update_model_data(const char* name, const char* json_data, const char* key_field) {
@@ -330,15 +345,7 @@ void update_model_data(const char* name, const char* json_data, const char* key_
         std::cerr << "[CPP] ERROR: Model not found: " << name << std::endl;
         return;
     }
-    if (QThread::currentThread() != model->thread()) {
-        QString data = QString::fromUtf8(json_data);
-        QString key = QString::fromUtf8(key_field);
-        QMetaObject::invokeMethod(model, [model, data, key]() {
-            model->updateJsonData(data, key);
-        }, Qt::QueuedConnection);
-    } else {
-        model->updateJsonData(QString::fromUtf8(json_data), QString::fromUtf8(key_field));
-    }
+    model->updateJsonData(QString::fromUtf8(json_data), QString::fromUtf8(key_field));
 }
 
 void clear_model(const char* name) {
@@ -348,13 +355,7 @@ void clear_model(const char* name) {
         std::cerr << "[CPP] ERROR: Model not found: " << name << std::endl;
         return;
     }
-    if (QThread::currentThread() != model->thread()) {
-        QMetaObject::invokeMethod(model, [model]() {
-            model->clear();
-        }, Qt::QueuedConnection);
-    } else {
-        model->clear();
-    }
+    model->clear();
 }
 
 int get_model_count(const char* name) {

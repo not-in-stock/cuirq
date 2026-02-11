@@ -40,6 +40,11 @@ void start_directory_watch(const char* path);
 void watch_directories(const char* json_paths);
 void stop_directory_watch();
 
+// Qt thread dispatch
+using qt_callback_t = void(*)(long ctx);
+void invoke_on_qt_thread(qt_callback_t fn, long ctx);
+void invoke_on_qt_thread_sync(qt_callback_t fn, long ctx);
+
 // Platform
 void hide_titlebar();
 void enable_sidebar_vibrancy(int width);

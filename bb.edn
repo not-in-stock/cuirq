@@ -14,7 +14,7 @@
 
            (println "\n Compiling Java classes...")
            (shell "mkdir -p build/classes")
-           (shell "javac --release 25 -d build/classes java/qml/PanamaBridge.java")
+           (shell "javac --release 25 -d build/classes java/qml/QtThread.java java/qml/PanamaBridge.java")
            (println "Java classes compiled")
            (println "\n Build completed successfully"))}
 

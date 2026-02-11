@@ -40,6 +40,10 @@ void cuirq_enable_toolbar_vibrancy(int sidebarWidth, int toolbarHeight);
 void cuirq_set_vibrancy_appearance(const char* mode);
 void cuirq_set_vibrancy_always_active(bool always);
 
+typedef void (*cuirq_qt_callback_t)(long ctx);
+void cuirq_invoke_on_qt_thread(cuirq_qt_callback_t fn, long ctx);
+void cuirq_invoke_on_qt_thread_sync(cuirq_qt_callback_t fn, long ctx);
+
 #ifdef __cplusplus
 }
 #endif
