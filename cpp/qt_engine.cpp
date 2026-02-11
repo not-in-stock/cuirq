@@ -94,6 +94,14 @@ static QString findShellQmlPath() {
     Dl_info info;
     if (dladdr(reinterpret_cast<void*>(cuirq::initialize), &info) && info.dli_fname) {
         QFileInfo libFile(QString::fromUtf8(info.dli_fname));
+
+        // macOS .app bundle: Frameworks/../Resources/qml/shell.qml
+        QString bundlePath = QDir(libFile.absolutePath() + "/../Resources/qml").absoluteFilePath("shell.qml");
+        if (QFileInfo::exists(bundlePath)) {
+            return bundlePath;
+        }
+
+        // Development: build/lib/../../qml/shell.qml
         QString projectRoot = libFile.absolutePath() + "/../..";
         QString shellPath = QDir(projectRoot).absoluteFilePath("qml/shell.qml");
         if (QFileInfo::exists(shellPath)) {
