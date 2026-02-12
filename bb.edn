@@ -121,6 +121,8 @@
    :task (shell "clj -M:dev -m nrepl.cmdline --port 7888 --middleware '[cider.nrepl/cider-middleware]'")}
 
   ;; AOT-compile Clojure namespaces for native-image
+  ;; Direct linking reduces native-image compile time and RAM usage
+  ;; https://github.com/clj-easy/graal-docs#native-image-compilation-time
   aot
   {:doc "AOT-compile example for native-image: bb aot <example-name>"
    :requires ([babashka.fs :as fs])
@@ -145,6 +147,7 @@
              (shell {:dir example-dir}
                     (str "clj "
                          "-J--enable-native-access=ALL-UNNAMED "
+                         "-J-Dclojure.compiler.direct-linking=true "
                          "-J-Djava.library.path=" lib-path " "
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\" \"" aot-dir "\"]}}}' "
                          "-M:bridge "
@@ -153,6 +156,8 @@
              (println (str "Classes: " (count (fs/glob aot-dir "**/*.class")) " files"))))}
 
   ;; Run with GraalVM tracing agent to collect native-image config
+  ;; Caller-based filter reduces false positives from Clojure internals
+  ;; https://github.com/clj-easy/graal-docs#automatically-discovering-reflection-config
   trace
   {:doc "Run example with tracing agent: bb trace <example-name>"
    :requires ([babashka.fs :as fs])
@@ -175,7 +180,8 @@
                  is-macos (re-find (re-pattern "(?i)mac") os-name)
                  macos-flag (if is-macos "-J-XstartOnFirstThread " "")
                  panama-flag "-J--enable-native-access=ALL-UNNAMED "
-                 agent-flag (str "-J-agentlib:native-image-agent=config-merge-dir=" config-dir " ")]
+                 filter-path (str project-root "/config/tracing-agent-filter.json")
+                agent-flag (str "-J-agentlib:native-image-agent=caller-filter-file=" filter-path ",config-merge-dir=" config-dir " ")]
              ;; Verify GraalVM is available (tracing agent requires it)
              (when-not (fs/which "native-image")
                (println "Error: native-image not found. Run inside 'nix develop'.")
