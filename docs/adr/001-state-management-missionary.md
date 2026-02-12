@@ -1,102 +1,112 @@
-# ADR-001: State Management with Missionary
+# ADR-001: Declarative State Management
 
 ## Status
-Proposed
+Accepted (amended)
 
 ## Context
 
 cuirq is a framework for building desktop applications in Clojure with Qt/QML UI. We need a state management system that is:
 
-1. **Lightweight** - without re-frame overhead (registries, interceptors, vector interpretation)
+1. **Lightweight** - without re-frame overhead (registries, interceptors, keyword-based dispatch)
 2. **Reactive** - automatic UI updates when data changes
-3. **Multi-layered** - like re-frame: raw data → derived → component data
-4. **I/O-friendly** - async operations support without callback hell
-5. **Virtual threads compatible** - leveraging Java 21 Virtual Threads
-6. **Offline-first ready** - ability to work with local and remote data
+3. **Multi-layered** - raw data -> derived -> QML-ready, with automatic propagation
+4. **I/O-friendly** - async operations on virtual threads without callback hell
+5. **Multi-window ready** - global vs per-window state decomposition (see ADR-007)
+6. **Performance-first** - transducers for single-pass transforms, diffing before QML push
+
+### Current Problems
+
+The file manager works but has ~70% imperative glue code:
+
+- **14 manual `state/update-state!` / `state/set-state!` calls** — each navigation function manually pushes `currentPath`, `canGoBack`, `canGoForward`, `breadcrumbs`, `itemCount` to QML
+- **84 lines duplicated** across `navigate-to!`, `go-back!`, `go-forward!` — identical state update blocks, model pushes, view-mode branching, directory watch setup
+- **6 manual `models/set-data!` calls** — grid/list and miller columns each push models separately
+- **2 dedup atoms** (`last-listing`, `refreshing?`) — manual deduplication instead of flow-based
+- **Inconsistent state push**: miller columns uses `update-state!` (incremental), grid/list uses `set-state!` (full replace)
 
 ### Alternatives Considered
 
 | Solution | Pros | Cons |
 |----------|------|------|
-| **re-frame** | Mature, well-documented, multi-level subscriptions | Heavy, ClojureScript-oriented, interpretation overhead |
-| **citrus** | Lighter than re-frame | Still carries ClojureScript/Rum legacy |
-| **cljfx approach** | Simple, functions instead of data events | No built-in reactivity |
-| **core.async** | Well-known, CSP model | Different concurrency model, harder for simple cases |
-| **missionary** | Reactive flows, Virtual Threads integration, built-in cancellation | Less known, requires learning |
+| **re-frame** | Mature, multi-level subscriptions | Heavy registries, ClojureScript-oriented, keyword dispatch overhead |
+| **missionary** | Reactive flows, function composition, Virtual Threads, cancellation | Less known, requires learning |
+| **core.async** | Well-known CSP model | Different concurrency model, no built-in reactivity |
+| **atom + watcher** | Zero deps, simple | No derived values, no backpressure, manual everything |
 
 ## Decision
 
-Two-layer architecture similar to reagent/re-frame:
+Two-layer architecture with missionary for reactive composition:
 
-1. **cuirq.state** - base layer on atoms, works standalone
-2. **cuirq.state.reactive** - optional missionary layer for complex scenarios
+1. **cuirq.state** — base layer on atoms, works standalone for simple apps
+2. **cuirq.state.reactive** — optional missionary layer for derived flows, auto-sync, effects
 
-This allows:
-- Using simple API for simple applications
-- Adding reactive layer when derived values, cancellation, backpressure are needed
-- Evolving both layers in parallel
-- Extracting reactive layer into a separate library in the future
+Key principles:
+- **No registries** — "subscriptions" are just `m/latest` compositions, plain functions
+- **Transducers first** — single-pass transforms everywhere (file listing, model sync, miller columns)
+- **Multi-window native** — single atom with global/per-window decomposition
+- **Pluggable native utilities** — C++ plugins for hot-path I/O (FSEvents, batch stat)
 
 ### Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    cuirq.state.reactive                     │
-│               (optional missionary layer)                   │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                   Derived Layer                        │ │
-│  │  - m/latest for cached derived values                  │ │
-│  │  - Transducer support                                  │ │
-│  │  - Flow composition                                    │ │
-│  └────────────────────────────────────────────────────────┘ │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │                   Effect Layer                         │ │
-│  │  - I/O on virtual threads (m/via m/blk)                │ │
-│  │  - Operation cancellation                              │ │
-│  │  - Backpressure                                        │ │
-│  └────────────────────────────────────────────────────────┘ │
-└──────────────────────────┬──────────────────────────────────┘
-                           │ uses
-┌──────────────────────────▼──────────────────────────────────┐
-│                      cuirq.state                            │
-│                     (base layer)                            │
-│  - Atoms with immutable data                                │
-│  - get/set/update state                                     │
-│  - Simple watches for Qt binding                            │
-│  - Works without dependencies                               │
-└─────────────────────────────────────────────────────────────┘
++------------------------------------------------------+
+|  App Code (file-manager, counter, etc.)              |
+|  - Pure update functions: signal -> state transition |
+|  - Transducer pipelines for transforms               |
++------------------------------------------------------+
+               | uses
++--------------v---------------------------------------+
+|  cuirq.state.reactive (optional missionary layer)    |
+|  - m/watch atom -> state-flow                        |
+|  - m/latest for derived flows (scoped by window-id)  |
+|  - Auto-diff + push to QML (state props + models)    |
+|  - Effects via m/observe (native plugin signals)     |
+|  - Transducer support in derive/sync                 |
++--------------+---------------------------------------+
+               | uses
++--------------v---------------------------------------+
+|  cuirq.state (base layer, zero deps)                 |
+|  - atom {:global {...} :windows {id {...}}}           |
+|  - get/set/update + watches                          |
+|  - Works standalone for simple apps                  |
++--------------+---------------------------------------+
+               | signals from
++--------------v---------------------------------------+
+|  Native Plugins (C++ via Panama FFM)                 |
+|  - DirectoryWatcher (FSEvents) -- exists             |
+|  - Future: batch stat, thumbnails, theme observer    |
++------------------------------------------------------+
 ```
 
 ### Usage
 
 ```clojure
-;; Simple application - base layer only
-(ns simple-app.core
+;; Simple application — base layer only
+(ns counter.core
   (:require [cuirq.state :as state]))
 
 (def !app (state/create-store {:count 0}))
 (state/watch! !app :qt #(qt/set-property "count" (:count %)))
 (state/update! !app update :count inc)
 
-;; Complex application - add reactive layer
+;; Complex application — add reactive layer
 (ns complex-app.core
   (:require [cuirq.state :as state]
-            [cuirq.state.reactive :as r]))
+            [cuirq.state.reactive :as r]
+            [missionary.core :as m]))
 
 (def !app (state/create-store {:items [] :filter :all}))
 
-;; Cached derived values
+;; Derived flow — just m/latest, no registry
 (def filtered-items
-  (r/derive !app
+  (m/latest
     (fn [{:keys [items filter]}]
-      (case filter
-        :active (remove :done items)
-        :done (filter :done items)
-        items))))
+      (into [] (r/filter-xf filter) items))
+    (m/watch !app)))
 
-;; Subscription with automatic cancellation
-(r/subscribe! filtered-items ::items-view
-  #(qt/set-model "itemsModel" %))
+;; Auto-sync to QML — replaces manual state pushes
+(r/sync-state! {:itemCount (m/latest count filtered-items)})
+(r/sync-model! :items filtered-items)
 ```
 
 ## Implementation
@@ -108,77 +118,49 @@ Base layer without external dependencies. Sufficient for simple applications.
 ```clojure
 (ns cuirq.state)
 
-;; ============================================================
-;; State Store
-;; ============================================================
-
 (defn create-store
-  "Creates a state store.
+  "Creates a state store with optional multi-window structure.
 
-   Example:
-     (def !app (create-store {:user nil :items []}))"
+   Simple:  (create-store {:count 0})
+   Multi:   (create-store {:global {:theme :dark}
+                           :windows {}})"
   [initial-state]
   (atom initial-state))
 
-(defn get-state
-  "Gets the current state."
-  [store]
-  @store)
-
-;; ============================================================
-;; State Updates
-;; ============================================================
+(defn get-state [store] @store)
 
 (defn update!
   "Updates state with a function.
-
-   Examples:
-     (update! !store assoc :loading true)
-     (update! !store update :count inc)"
+   (update! !store assoc :loading true)
+   (update! !store update :count inc)"
   [store f & args]
   (apply swap! store f args))
 
-(defn set!
-  "Sets new state."
-  [store new-state]
+(defn set! [store new-state]
   (reset! store new-state))
 
 (defn update-in!
-  "Updates value at path."
+  "Updates value at path.
+   (update-in! !store [:windows win-id :path] (constantly new-path))"
   [store path f & args]
   (apply swap! store update-in path f args))
 
-;; ============================================================
-;; Simple Watches (for Qt binding)
-;; ============================================================
-
+;; Watches for Qt binding
 (defn watch!
-  "Adds a watch to the store. Returns a cancel function.
-
-   Example:
-     (watch! !app :qt-sync
-       (fn [new-state]
-         (qt/set-context-property \"appState\" new-state)))"
+  "Adds a watch. Returns a cancel function."
   [store key callback]
   (add-watch store key (fn [_ _ _ new-val] (callback new-val)))
   #(remove-watch store key))
 
-(defn unwatch!
-  "Removes watch by key."
-  [store key]
+(defn unwatch! [store key]
   (remove-watch store key))
 
-;; ============================================================
 ;; Selectors (simple, no caching)
-;; ============================================================
-
 (defn select
   "Extracts value from state.
-
-   Examples:
-     (select !app :count)
-     (select !app [:user :name])
-     (select !app #(filter :active (:items %)))"
+   (select !app :count)
+   (select !app [:user :name])
+   (select !app #(filter :active (:items %)))"
   [store selector]
   (let [state @store]
     (cond
@@ -188,9 +170,66 @@ Base layer without external dependencies. Sufficient for simple applications.
       :else               state)))
 ```
 
-### 2. Reactive Layer: cuirq.state.reactive
+### 2. Multi-Window State
 
-Optional missionary layer for complex scenarios.
+Single atom with global/per-window decomposition. Cross-window ops (drag-and-drop) are atomic `swap!` on shared atom.
+
+```clojure
+;; State shape
+{:global {:theme :dark
+          :favorites ["~/Documents" "~/Downloads"]}
+ :windows {"win-0" {:path "/Users/me/Documents"
+                     :history {:back [] :forward []}
+                     :sort {:field :name :order :asc}
+                     :view-mode "list"
+                     :selection #{}}
+           "win-1" {:path "/Users/me/Downloads"
+                     :history {:back [] :forward []}
+                     :sort {:field :modified :order :desc}
+                     :view-mode "grid"
+                     :selection #{}}}}
+
+;; Window-scoped flow — recalculates only when this window's slice changes
+(defn window-flow [win-id key]
+  (m/latest #(get-in % [:windows win-id key]) (m/watch !app)))
+
+;; Global flow
+(defn global-flow [key]
+  (m/latest #(get-in % [:global key]) (m/watch !app)))
+
+;; Pure navigation — one function, not three
+(defn navigate [state win-id path]
+  (let [current (get-in state [:windows win-id :path])]
+    (-> state
+        (update-in [:windows win-id :history :back] conj current)
+        (assoc-in  [:windows win-id :history :forward] [])
+        (assoc-in  [:windows win-id :path] path)
+        (assoc-in  [:windows win-id :selection] #{}))))
+
+(defn go-back [state win-id]
+  (let [win    (get-in state [:windows win-id])
+        prev   (peek (get-in win [:history :back]))]
+    (when prev
+      (-> state
+          (update-in [:windows win-id :history :back] pop)
+          (update-in [:windows win-id :history :forward] conj (:path win))
+          (assoc-in  [:windows win-id :path] prev)
+          (assoc-in  [:windows win-id :selection] #{})))))
+
+(defn go-forward [state win-id]
+  (let [win    (get-in state [:windows win-id])
+        next-p (peek (get-in win [:history :forward]))]
+    (when next-p
+      (-> state
+          (update-in [:windows win-id :history :forward] pop)
+          (update-in [:windows win-id :history :back] conj (:path win))
+          (assoc-in  [:windows win-id :path] next-p)
+          (assoc-in  [:windows win-id :selection] #{})))))
+```
+
+### 3. Reactive Layer: cuirq.state.reactive
+
+Optional missionary layer. No registries — flows are plain functions composed with `m/latest`.
 
 ```clojure
 (ns cuirq.state.reactive
@@ -198,101 +237,93 @@ Optional missionary layer for complex scenarios.
             [cuirq.state :as state]))
 
 ;; ============================================================
-;; Subscriptions Registry
-;; ============================================================
-
-(defonce ^:private subscriptions (atom {}))
-
-;; ============================================================
-;; Derived Values (Flows)
+;; Derived Flows
 ;; ============================================================
 
 (defn derive
-  "Creates a derived flow from store with automatic caching.
-
-   Usage variants:
-
-   ;; Simple selector
+  "Creates a derived flow from store.
    (derive !store :items)
-   (derive !store #(get-in % [:user :name]))
-
-   ;; With transducer
    (derive !store :items (filter :active))
    (derive !store :items (comp (filter :active) (take 10)))"
   ([store selector]
-   (let [select-fn (if (keyword? selector) selector selector)]
-     (m/latest select-fn (m/watch store))))
+   (let [f (if (keyword? selector) selector selector)]
+     (m/latest f (m/watch store))))
   ([store selector xf]
-   (let [select-fn (if (keyword? selector) selector selector)]
-     (m/latest #(into [] xf (select-fn %)) (m/watch store)))))
+   (let [f (if (keyword? selector) selector selector)]
+     (m/latest #(into [] xf (f %)) (m/watch store)))))
 
 (defn derive-from
-  "Creates a derived flow from multiple sources.
-
-   Example:
-     (derive-from [items-flow filter-flow]
-       (fn [items flt]
-         (filter #(= (:status %) flt) items)))"
+  "Derived flow from multiple sources.
+   (derive-from [items-flow filter-flow]
+     (fn [items flt] (filter #(= (:status %) flt) items)))"
   [flows combine-fn]
   (apply m/latest combine-fn flows))
 
 ;; ============================================================
-;; Subscriptions
+;; Subscriptions (no registry — just cancel functions)
 ;; ============================================================
 
 (defn subscribe!
-  "Subscribes to a flow with callback.
+  "Subscribes to a flow. Returns a cancel function."
+  [flow callback]
+  (let [task (m/reduce (fn [_ v] (callback v) nil) nil flow)]
+    (task (fn [_]) (fn [e] (println "Subscription error:" e)))))
+
+;; ============================================================
+;; QML Sync — replaces manual state/model pushes
+;; ============================================================
+
+(defn sync-state!
+  "Binds a map of {qml-prop-name flow} to QML state properties.
+   Auto-diffs: only pushes changed properties.
    Returns a cancel function.
 
-   Example:
-     (def cancel (subscribe! filtered-items ::my-sub
-                   (fn [items] (println \"Items:\" items))))
-     ;; Cancel
-     (cancel)"
-  [flow key callback]
-  (let [task (m/reduce
-               (fn [_ value]
-                 (callback value)
-                 nil)
-               nil
-               flow)
-        cancel (task
-                 (fn [_] (swap! subscriptions dissoc key))
-                 (fn [e] (println "Subscription error:" key e)))]
-    (swap! subscriptions assoc key cancel)
-    cancel))
+   (sync-state! win-id
+     {:currentPath path-flow
+      :canGoBack   can-go-back-flow
+      :itemCount   item-count-flow})"
+  [win-id prop-flow-map]
+  (let [combined (apply m/latest
+                   (fn [& vals]
+                     (zipmap (keys prop-flow-map) vals))
+                   (vals prop-flow-map))
+        prev (atom {})]
+    (subscribe! combined
+      (fn [new-map]
+        (let [old @prev
+              changed (into {}
+                       (remove (fn [[k v]] (= v (get old k))))
+                       new-map)]
+          (reset! prev new-map)
+          (when (seq changed)
+            ;; push only changed props to Qt thread
+            (send-to-qt-thread!
+              #(doseq [[k v] changed]
+                 (qt/set-context-property (name k) v)))))))))
 
-(defn unsubscribe!
-  "Cancels subscription by key."
-  [key]
-  (when-let [cancel (get @subscriptions key)]
-    (cancel)
-    (swap! subscriptions dissoc key)))
+(defn sync-model!
+  "Binds a flow to a QML ListModel. Applies optional transducer.
+   Returns a cancel function.
 
-(defn unsubscribe-all!
-  "Cancels all subscriptions."
-  []
-  (doseq [[_ cancel] @subscriptions]
-    (cancel))
-  (reset! subscriptions {}))
-```
+   (sync-model! :files files-flow)
+   (sync-model! :files files-flow (map #(select-keys % [:name :path :size])))"
+  ([model-key flow]
+   (subscribe! flow
+     (fn [items]
+       (send-to-qt-thread!
+         #(qt/set-model-data (name model-key) items)))))
+  ([model-key flow xf]
+   (subscribe! (m/latest #(into [] xf %) flow)
+     (fn [items]
+       (send-to-qt-thread!
+         #(qt/set-model-data (name model-key) items))))))
 
-### 3. Async Effects (cuirq.state.reactive)
-
-```clojure
 ;; ============================================================
-;; Async Effects with Virtual Threads
+;; Async Effects
 ;; ============================================================
 
 (defn async!
-  "Executes async operation on virtual thread.
-   Returns a cancel function.
-
-   Example:
-     (async!
-       (fn [] (http/get \"https://api.example.com/items\"))
-       (fn [items] (state/update! !store assoc :items items))
-       (fn [error] (state/update! !store assoc :error error)))"
+  "Executes async operation on virtual thread. Returns cancel fn."
   [operation on-success on-error]
   (let [task (m/sp
                (try
@@ -302,519 +333,216 @@ Optional missionary layer for complex scenarios.
                    (on-error e))))]
     (task (fn [_]) (fn [e] (println "Async task error:" e)))))
 
-(defn async-task
-  "Creates a missionary task for I/O operation.
-
-   Example:
-     (def fetch-items
-       (async-task #(http/get \"/api/items\")))
-
-     ;; Usage in m/sp context
-     (m/? fetch-items)"
-  [operation]
-  (m/via m/blk (operation)))
-
 (defmacro go
-  "Macro for sequential async operations.
-   Returns a cancel function.
-
-   Example:
-     (go
-       (let [user (m/? (fetch-user id))
-             items (m/? (fetch-items (:id user)))]
-         (state/update! !store assoc
-           :user user
-           :items items)))"
+  "Sequential async operations on virtual threads. Returns cancel fn.
+   (go
+     (let [user (m/? (fetch-user id))
+           items (m/? (fetch-items (:id user)))]
+       (state/update! !store assoc :user user :items items)))"
   [& body]
   `(let [task# (m/sp ~@body)]
      (task# (fn [_#]) (fn [e#] (println "async error:" e#)))))
 ```
 
-### 4. Qt Integration (cuirq.state.reactive)
+### 4. Transducers
+
+First-class, not afterthought. Reusable pipelines applied at every stage.
 
 ```clojure
-;; continued from cuirq.state.reactive
-;; ============================================================
-;; Qt/QML Integration
-;; ============================================================
+;; Reusable file transform pipelines
+(def visible-files-xf
+  "Removes hidden files and enriches metadata in a single pass."
+  (comp
+    (remove :hidden?)
+    (map (fn [f] (assoc f :display-size (format-size (:size f)))))))
 
-(defn bind-qt!
-  "Binds flow to Qt updates.
-   Returns a cancel function.
+(def grid-view-xf
+  "Compact payload for grid delegates — fewer properties = faster QML binding."
+  (comp
+    visible-files-xf
+    (map #(select-keys % [:name :path :dir? :display-size :icon]))))
 
-   Example:
-     (bind-qt! filtered-items-flow
-       (fn [items] (qt/update-list-model \"itemsModel\" items)))"
-  [flow qt-updater]
-  (subscribe! flow (gensym "qt-binding")
-    (fn [value]
-      ;; send-to-qt-thread should be implemented in cuirq.core
-      (send-to-qt-thread #(qt-updater value)))))
+(def miller-column-xf
+  "Minimal payload for miller column delegates."
+  (comp
+    visible-files-xf
+    (map #(select-keys % [:name :path :dir?]))))
 
-(defn bind-property!
-  "Binds flow to Qt context property.
-
-   Example:
-     (bind-property! user-name-flow \"userName\")"
-  [flow property-name]
-  (bind-qt! flow
-    (fn [value]
-      (qt/set-context-property property-name value))))
-```
-
-### 5. Transducers Support (cuirq.state.reactive)
-
-```clojure
-;; continued from cuirq.state.reactive
-;; ============================================================
-;; Transducers - first-class citizen
-;; ============================================================
-
-;; Library of standard transformations
-(def active (filter :active))
-(def completed (filter :completed))
-(def not-deleted (remove :deleted))
-
-(defn sorted-by
-  "Transducer-friendly sorting (via into with post-sorting)."
-  [key-fn]
-  (fn [coll] (sort-by key-fn coll)))
-
-(defn derive-xf
-  "Creates a derived flow with transducer.
-
-   Example:
-     (def !active-items
-       (derive-xf !store :items
-         (comp active
-               (map #(select-keys % [:id :title]))
-               (take 20))))"
-  [store path xf]
-  (m/latest
-    #(into [] xf (get-in % (if (vector? path) path [path])))
-    (m/watch store)))
-
-;; Composition example
-(comment
-  ;; Define reusable transformations
-  (def item-pipeline
-    (comp (filter :valid)
-          (map normalize)
-          (remove :archived)))
-
-  ;; Use everywhere
-  (def !processed-items (derive-xf !store :items item-pipeline))
-
-  ;; Same pipeline for I/O
-  (into [] item-pipeline (fetch-items-from-api))
-
-  ;; For streaming
-  (run! process! (eduction item-pipeline items)))
-```
-
-## Example: File Manager
-
-Complete file manager example based on the proposed architecture:
-
-```clojure
-(ns filemanager.core
-  (:require [cuirq.state :as state]
-            [cuirq.state.reactive :as r]
-            [missionary.core :as m]
-            [clojure.java.io :as io])
-  (:import [java.nio.file FileSystems StandardWatchEventKinds]))
-
-;; ============================================================
-;; State
-;; ============================================================
-
-(def !app
-  (state/create-store
-    {:current-path (System/getProperty "user.home")
-     :history []
-     :sort {:field :name :order :asc}
-     :selection #{}}))
-
-;; Thumbnails in separate atom - independent lifecycle
-(def !thumbnails
-  (state/create-store {})) ; {path -> {:status :loading/:ready/:error, :uri "..."}}
-
-;; ============================================================
-;; File System
-;; ============================================================
-
-(defn list-files [path]
-  (let [dir (io/file path)]
-    (when (.isDirectory dir)
-      (->> (.listFiles dir)
-           (map (fn [f]
-                  {:name (.getName f)
-                   :path (.getAbsolutePath f)
-                   :dir? (.isDirectory f)
-                   :size (.length f)
-                   :modified (.lastModified f)
-                   :hidden? (.isHidden f)}))
-           (remove :hidden?)))))
-
-(defn watch-directory-flow
-  "Flow that emits on directory changes."
-  [path-flow]
-  (m/ap
-    (let [path (m/?> path-flow)]
-      (m/? (m/observe
-             (fn [emit!]
-               (let [watcher (.newWatchService (FileSystems/getDefault))
-                     dir-path (.toPath (io/file path))]
-                 (.register dir-path watcher
-                   (into-array [StandardWatchEventKinds/ENTRY_CREATE
-                                StandardWatchEventKinds/ENTRY_DELETE
-                                StandardWatchEventKinds/ENTRY_MODIFY]))
-                 (emit! :init)
-                 (future
-                   (loop []
-                     (when-let [key (.take watcher)]
-                       (.pollEvents key)
-                       (.reset key)
-                       (emit! :changed)
-                       (recur))))
-                 #(.close watcher))))))))
-
-;; ============================================================
-;; Derived Flows
-;; ============================================================
-
-(def app-flow (m/watch !app))
-
-(def current-path-flow
-  (r/derive !app :current-path))
-
-(def sort-flow
-  (r/derive !app :sort))
-
-(def history-flow
-  (r/derive !app :history))
-
-;; Files are re-read when:
-;; 1. Directory changes
-;; 2. File watcher event
+;; Usage in flows
 (def files-flow
   (m/latest
-    (fn [path _trigger]
-      (or (list-files path) []))
-    current-path-flow
-    (m/relieve {} (watch-directory-flow current-path-flow))))
+    (fn [path sort-state]
+      (into [] visible-files-xf
+        (sort-by (sort-fn sort-state) (list-dir path))))
+    (window-flow win-id :path)
+    (window-flow win-id :sort)))
 
-;; Sorting
-(def sorted-files-flow
-  (m/latest
-    (fn [files {:keys [field order]}]
-      (let [sorted (sort-by field files)]
-        (if (= order :desc)
-          (reverse sorted)
-          sorted)))
-    files-flow
-    sort-flow))
+;; Same pipeline works for sync
+(sync-model! :files files-flow grid-view-xf)
 
-;; Thumbnails
-(def thumbnails-flow (m/watch !thumbnails))
-
-;; Final view for UI
-(def view-flow
-  (m/latest
-    (fn [files path history thumbs selection]
-      {:dirs (->> files
-                  (filter :dir?)
-                  (map #(assoc % :selected? (contains? selection (:path %)))))
-       :files (->> files
-                   (remove :dir?)
-                   (map (fn [{:keys [path] :as f}]
-                          (let [thumb (get thumbs path)]
-                            (assoc f
-                              :selected? (contains? selection (:path f))
-                              :thumbnail-uri
-                              (case (:status thumb)
-                                :ready (:uri thumb)
-                                :loading "qrc:/icons/loading.png"
-                                :error "qrc:/icons/error.png"
-                                "qrc:/icons/file.png"))))))
-       :current-path path
-       :can-go-back? (boolean (seq history))
-       :breadcrumbs (clojure.string/split path #"/")})
-    sorted-files-flow
-    current-path-flow
-    history-flow
-    thumbnails-flow
-    (r/derive !app :selection)))
-
-;; ============================================================
-;; Actions (use base state/)
-;; ============================================================
-
-(defn navigate! [path]
-  (state/set! !thumbnails {}) ; Clear thumbnail cache
-  (state/update! !app
-    (fn [state]
-      (-> state
-          (update :history conj (:current-path state))
-          (assoc :current-path path)
-          (assoc :selection #{})))))
-
-(defn go-back! []
-  (when (seq (:history @!app))
-    (state/set! !thumbnails {})
-    (state/update! !app
-      (fn [{:keys [history] :as state}]
-        (-> state
-            (assoc :current-path (peek history))
-            (update :history pop)
-            (assoc :selection #{}))))))
-
-(defn set-sort! [field]
-  (state/update! !app
-    (fn [state]
-      (update state :sort
-        (fn [{old-field :field old-order :order}]
-          (if (= old-field field)
-            {:field field :order (if (= old-order :asc) :desc :asc)}
-            {:field field :order :asc}))))))
-
-(defn toggle-selection! [path]
-  (state/update! !app
-    (fn [state]
-      (update state :selection
-        (fn [sel]
-          (if (contains? sel path)
-            (disj sel path)
-            (conj sel path)))))))
-
-(defn select-all! []
-  (let [files (state/select !app :files)]
-    (state/update! !app assoc :selection
-      (set (map :path files)))))
-
-(defn clear-selection! []
-  (state/update! !app assoc :selection #{}))
-
-;; ============================================================
-;; Thumbnails
-;; ============================================================
-
-(def thumbnail-cache-dir
-  (io/file (System/getProperty "java.io.tmpdir") "cuirq-thumbs"))
-
-(defn thumbnail-path [original-path]
-  (io/file thumbnail-cache-dir
-           (str (Math/abs (hash original-path)) ".png")))
-
-(defn image-file? [path]
-  (some #(.endsWith (.toLowerCase path) %)
-        [".jpg" ".jpeg" ".png" ".gif" ".webp" ".bmp"]))
-
-(defn request-thumbnail! [path]
-  (when (and (image-file? path)
-             (not (contains? @!thumbnails path)))
-    (state/update! !thumbnails assoc path {:status :loading})
-    (r/async!
-      (fn []
-        (.mkdirs thumbnail-cache-dir)
-        (let [thumb-file (thumbnail-path path)]
-          ;; Real thumbnail generation would go here
-          ;; (generate-thumbnail! path thumb-file)
-          (str "file://" (.getAbsolutePath thumb-file))))
-      (fn [uri]
-        (state/update! !thumbnails assoc path {:status :ready :uri uri}))
-      (fn [_error]
-        (state/update! !thumbnails assoc path {:status :error})))))
-
-(defn request-thumbnails! [files]
-  (doseq [{:keys [path dir?]} files
-          :when (and (not dir?) (image-file? path))]
-    (request-thumbnail! path)))
-
-;; ============================================================
-;; Startup
-;; ============================================================
-
-(defn start! []
-  ;; Bind view to Qt (reactive layer)
-  (r/bind-qt! view-flow
-    (fn [{:keys [dirs files current-path can-go-back? breadcrumbs]}]
-      ;; Update QML models
-      (qt/set-model-data "dirsModel" dirs)
-      (qt/set-model-data "filesModel" files)
-      (qt/set-context-property "currentPath" current-path)
-      (qt/set-context-property "canGoBack" can-go-back?)
-      (qt/set-context-property "breadcrumbs" breadcrumbs)
-      ;; Request thumbnails for visible files
-      (request-thumbnails! files)))
-
-  ;; Register QML signal handlers
-  (cuirq/on-signal! :navigate navigate!)
-  (cuirq/on-signal! :goBack (fn [_] (go-back!)))
-  (cuirq/on-signal! :setSort (fn [[field]] (set-sort! (keyword field))))
-  (cuirq/on-signal! :toggleSelection toggle-selection!)
-  (cuirq/on-signal! :selectAll (fn [_] (select-all!)))
-  (cuirq/on-signal! :clearSelection (fn [_] (clear-selection!))))
-
-(defn stop! []
-  (r/unsubscribe-all!))
+;; Same pipeline works for one-off computations
+(into [] grid-view-xf (list-dir "/tmp"))
 ```
 
-## Example: Offline-First App
+### 5. Pluggable Native Utilities
+
+Generalize the existing DirectoryWatcher pattern into a plugin architecture for hot-path I/O that's too slow in JVM.
 
 ```clojure
-(ns myapp.offline
-  (:require [cuirq.state :as state]
-            [cuirq.state.reactive :as r]
-            [missionary.core :as m]))
+;; Current pattern (DirectoryWatcher, already exists):
+;; C++ FSEvents -> SignalForwarder -> Clojure handler -> swap! state
 
-;; ============================================================
-;; State - local/remote separation
-;; ============================================================
+;; Generalized: native plugin emits signals, feeds into missionary flows
+(defn native-signal-flow
+  "Creates a missionary flow from a native C++ signal.
+   (native-signal-flow :directory-changed)"
+  [signal-key]
+  (m/observe
+    (fn [emit!]
+      (let [handler (fn [data] (emit! data))]
+        (cuirq/on-signal! signal-key handler)
+        #(cuirq/remove-signal-handler! signal-key handler)))))
 
-(def !app
-  (state/create-store
-    {:local {:items {}     ; Local changes
-             :pending []}  ; Sync queue
-     :remote {:items {}    ; Server data
-              :last-sync nil}
-     :sync {:status :idle  ; :idle, :syncing, :error
-            :error nil}}))
+;; Files re-read when directory changes (native FSEvents)
+(def dir-changed-flow (native-signal-flow :directory-changed))
 
-;; ============================================================
-;; Derived - data merging
-;; ============================================================
-
-(def local-items-flow
-  (r/derive !app #(get-in % [:local :items])))
-
-(def remote-items-flow
-  (r/derive !app #(get-in % [:remote :items])))
-
-;; Merge: local data takes priority
-(def merged-items-flow
+(def files-flow
   (m/latest
-    (fn [local remote]
-      (merge remote local)) ; local overwrites remote
-    local-items-flow
-    remote-items-flow))
+    (fn [path sort-state _trigger]
+      (into [] visible-files-xf
+        (sort-by (sort-fn sort-state) (list-dir path))))
+    (window-flow win-id :path)
+    (window-flow win-id :sort)
+    (m/relieve {} dir-changed-flow)))
 
-(def pending-flow
-  (r/derive !app #(get-in % [:local :pending])))
-
-(def sync-status-flow
-  (r/derive !app #(get-in % [:sync :status])))
-
-;; View
-(def view-flow
-  (m/latest
-    (fn [items pending status]
-      {:items (vals items)
-       :has-pending? (boolean (seq pending))
-       :pending-count (count pending)
-       :sync-status status})
-    merged-items-flow
-    pending-flow
-    sync-status-flow))
-
-;; ============================================================
-;; Actions
-;; ============================================================
-
-(defn add-item! [item]
-  (let [id (or (:id item) (random-uuid))
-        item-with-id (assoc item :id id :_local true)]
-    (state/update! !app
-      (fn [state]
-        (-> state
-            (assoc-in [:local :items id] item-with-id)
-            (update-in [:local :pending] conj {:op :create :item item-with-id}))))))
-
-(defn update-item! [id updates]
-  (state/update! !app
-    (fn [state]
-      (-> state
-          (update-in [:local :items id] merge updates)
-          (update-in [:local :pending] conj {:op :update :id id :updates updates})))))
-
-(defn delete-item! [id]
-  (state/update! !app
-    (fn [state]
-      (-> state
-          (update-in [:local :items] dissoc id)
-          (update-in [:local :pending] conj {:op :delete :id id})))))
-
-;; ============================================================
-;; Sync
-;; ============================================================
-
-(defn sync-to-server! []
-  (r/go
-    (state/update! !app assoc-in [:sync :status] :syncing)
-    (try
-      (let [pending (get-in @!app [:local :pending])]
-        (doseq [op pending]
-          (m/? (m/via m/blk
-                 (case (:op op)
-                   :create (api/create-item (:item op))
-                   :update (api/update-item (:id op) (:updates op))
-                   :delete (api/delete-item (:id op))))))
-        ;; Successfully synced
-        (state/update! !app
-          (fn [state]
-            (-> state
-                (assoc-in [:local :pending] [])
-                (assoc-in [:sync :status] :idle)
-                (assoc-in [:sync :error] nil)))))
-      (catch Exception e
-        (state/update! !app
-          (fn [state]
-            (-> state
-                (assoc-in [:sync :status] :error)
-                (assoc-in [:sync :error] (.getMessage e)))))))))
-
-(defn fetch-from-server! []
-  (r/go
-    (try
-      (let [items (m/? (m/via m/blk (api/get-items)))]
-        (state/update! !app
-          (fn [state]
-            (-> state
-                (assoc-in [:remote :items] (into {} (map (juxt :id identity) items)))
-                (assoc-in [:remote :last-sync] (System/currentTimeMillis))))))
-      (catch Exception e
-        (println "Fetch error:" e)))))
+;; Future native plugins (same pattern):
+;; - Batch file metadata (stat syscall batching)
+;; - Thumbnail generation (libvips/CoreGraphics)
+;; - System accent color observer (NSApp.effectiveAppearance KVO)
 ```
+
+## File Manager Refactoring Blueprint
+
+Concrete before/after showing how the declarative layer eliminates imperative glue.
+
+### Before (current — imperative)
+
+```clojure
+;; 3 functions x ~30 lines each, nearly identical
+;; navigate-to!, go-back!, go-forward! all contain:
+
+(defn navigate-to! [path]
+  ;; 1. History manipulation
+  (swap! nav-history (fn [h]
+                       (-> h
+                           (update :back conj current-path)
+                           (assoc :forward []))))
+  ;; 2. View-mode branching (duplicated in all 3 functions)
+  (if (= @view-mode "columns")
+    (do
+      (dirs/invalidate-all!)
+      (miller-navigate-to! path)
+      ;; 3. Manual state push (same 5 properties in all 3 functions)
+      (state/update-state! assoc
+                           :currentPath path
+                           :canGoBack (boolean (seq (:back @nav-history)))
+                           :canGoForward (boolean (seq (:forward @nav-history)))
+                           :breadcrumbs (json/write-str (build-breadcrumbs path))
+                           :itemCount (count (dirs/list-dir! path))))
+    (do
+      (tree/collapse-all!)
+      (dirs/invalidate-all!)
+      ;; 4. Manual model push
+      (let [items (tree/build-flat-list path @sort-state)]
+        (reset! last-listing items)
+        (models/set-data! :files items)
+        ;; 5. Manual state push (same properties, different API)
+        (state/set-state!
+         {:currentPath  path
+          :canGoBack    (boolean (seq (:back @nav-history)))
+          :canGoForward (boolean (seq (:forward @nav-history)))
+          :itemCount    (count items)
+          :breadcrumbs  (json/write-str (build-breadcrumbs path))})
+        ;; 6. Manual watch setup
+        (let [paths (dirs/active-paths)]
+          (if (seq paths)
+            (cuirq/watch-directories! paths)
+            (cuirq/start-directory-watch! path)))))))
+```
+
+### After (declarative with missionary)
+
+```clojure
+;; Pure state transitions — one function replaces three
+(defn navigate [state win-id path]
+  (-> state
+      (update-in [:windows win-id :history :back] conj (get-in state [:windows win-id :path]))
+      (assoc-in  [:windows win-id :history :forward] [])
+      (assoc-in  [:windows win-id :path] path)
+      (assoc-in  [:windows win-id :selection] #{})))
+
+;; Signal handlers — just swap!, no manual pushes
+(cuirq/on-signal! :navigate  #(state/update! !app navigate win-id %))
+(cuirq/on-signal! :goBack    #(state/update! !app go-back win-id))
+(cuirq/on-signal! :goForward #(state/update! !app go-forward win-id))
+
+;; Derived flows — auto-recomputed on state change
+(def path-flow       (window-flow win-id :path))
+(def history-flow    (window-flow win-id :history))
+(def sort-flow       (window-flow win-id :sort))
+(def can-go-back-flow    (m/latest #(boolean (seq (:back %))) history-flow))
+(def can-go-forward-flow (m/latest #(boolean (seq (:forward %))) history-flow))
+(def breadcrumbs-flow    (m/latest build-breadcrumbs path-flow))
+(def files-flow
+  (m/latest
+    (fn [path sort-state _fs-event]
+      (into [] visible-files-xf
+        (sort-by (sort-fn sort-state) (list-dir path))))
+    path-flow sort-flow dir-changed-flow))
+(def item-count-flow (m/latest count files-flow))
+
+;; Auto-sync to QML — replaces 14 manual state pushes
+(sync-state! win-id
+  {:currentPath  path-flow
+   :canGoBack    can-go-back-flow
+   :canGoForward can-go-forward-flow
+   :breadcrumbs  breadcrumbs-flow
+   :itemCount    item-count-flow})
+
+(sync-model! :files files-flow grid-view-xf)
+```
+
+**What's eliminated:**
+- 3 near-identical 30-line functions -> 3 pure 5-line functions
+- 14 manual state pushes -> 1 `sync-state!` declaration
+- 6 manual model pushes -> 1 `sync-model!` declaration
+- 2 dedup atoms -> flow deduplication is automatic
+- View-mode branching in nav -> transducer selection at sync level
+- Manual directory watch setup -> native signal flow composition
 
 ## Consequences
 
 ### Positive
 
-1. **Modularity** - base layer works without dependencies, reactive is optional
-2. **Simplicity** - state is just atoms, actions are just functions
-3. **Reactivity** - missionary flows auto-recompute (in reactive layer)
-4. **Efficiency** - caching, laziness, virtual threads
-5. **Composition** - flows and transducers combine easily
-6. **Cancellation** - all operations can be cancelled
-7. **Testability** - pure functions, deterministic state
-8. **Flexibility** - simple apps use only cuirq.state, complex apps add cuirq.state.reactive
+1. **Modularity** — base layer works without dependencies, reactive is optional
+2. **No registries** — flows are functions, composed with `m/latest`, no keyword dispatch
+3. **Multi-window native** — `window-flow` scopes derived data per window, cross-window ops atomic
+4. **Transducer performance** — single-pass transforms, reusable across flows and one-off ops
+5. **Native plugin extensibility** — hot-path I/O in C++, signals feed into missionary flows
+6. **Drastic glue reduction** — file manager refactoring eliminates ~70% of imperative navigation code
+7. **Auto-diff sync** — only changed properties pushed to QML, no manual dedup
+8. **Cancellation** — all flows and effects cancellable
+9. **Testability** — pure state transition functions, deterministic
 
 ### Negative
 
-1. **Learning curve** - missionary is less known than core.async
-2. **Debugging** - reactive flows are harder to debug than imperative code
-3. **Two APIs** - need to understand when to use which layer
-
-### Mitigation
-
-1. Good documentation with examples for both layers
-2. Logging middleware for reactive layer debugging
-3. missionary is actively developed and well-supported
-4. Clear guidelines on when to use which layer
+1. **Learning curve** — missionary is less known than core.async (mitigated: simple base layer works standalone)
+2. **Debugging** — reactive flows harder to trace than imperative code (mitigated: logging middleware)
+3. **Two APIs** — need to understand when to use which layer (guideline: base for simple apps, reactive when you have derived values or need auto-sync)
 
 ## References
 
 - [Missionary Documentation](https://github.com/leonoel/missionary)
-- [Re-frame Concepts](https://day8.github.io/re-frame/re-frame/)
-- [Java Virtual Threads](https://openjdk.org/jeps/444)
-- [cljfx Discussion](https://github.com/cljfx/cljfx/issues/33)
+- [Java Virtual Threads (JEP 444)](https://openjdk.org/jeps/444)
+- ADR-006: Hot Reload Improvements (proxy window, engine-per-reload)
+- ADR-007: Multi-Window Support (engine-per-window, WindowManager)
