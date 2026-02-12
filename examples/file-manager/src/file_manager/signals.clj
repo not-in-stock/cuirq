@@ -6,6 +6,7 @@
             [file-manager.dirs :as dirs]
             [file-manager.tree :as tree]
             [cuirq.core :as cuirq]
+            [cuirq.macos.window :as macos.window]
             [cuirq.state :as state]
             [clojure.data.json :as json])
   (:import [java.io File]))
@@ -114,7 +115,7 @@
                     (fn [_ json-args]
                       (let [args (json/read-str json-args)
                             mode (first args)]
-                        (cuirq/set-vibrancy-appearance! mode))))
+                        (macos.window/set-vibrancy-appearance! mode))))
 
   (cuirq/on-signal! :sortChanged
                     (fn [_ json-args]

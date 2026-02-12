@@ -1,5 +1,6 @@
 (ns file-manager.core
   (:require [cuirq.core :as cuirq]
+            [cuirq.macos.window :as macos.window]
             [cuirq.state :as state]
             [cuirq.models :as models]
             [file-manager.miller :as miller]
@@ -35,13 +36,13 @@
 
       ;; Load QML
       (println " [5/5] Loading QML...")
-      (cuirq/set-app-name! "cuirq File Manager")
+      (macos.window/set-app-name! "cuirq File Manager")
       (let [qml-path (str (System/getProperty "user.dir") "/resources/file_manager.qml")]
         (when-not (cuirq/load-qml! qml-path)
           (throw (ex-info "Failed to load QML" {:path qml-path}))))
-      (cuirq/hide-titlebar!)
-      (cuirq/enable-sidebar-vibrancy! 220)
-      (cuirq/enable-toolbar-vibrancy! 220 48)
+      (macos.window/hide-titlebar!)
+      (macos.window/enable-sidebar-vibrancy! 220)
+      (macos.window/enable-toolbar-vibrancy! 220 48)
 
       ;; Navigate to home directory
       (signals/navigate-to! (System/getProperty "user.home"))
