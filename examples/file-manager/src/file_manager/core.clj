@@ -62,6 +62,8 @@
 ;;  :active-count N}
 (defonce ^:private miller-state (atom {:columns [] :active-count 0}))
 
+(def ^:private miller-flow (m/watch miller-state))
+
 ;; Cache last data set on each miller model to avoid redundant updates
 (defonce ^:private last-miller-data (atom {}))
 
@@ -88,10 +90,18 @@
   []
   (println "[reactive] Starting nav property sync...")
   (reactive/sync-props!
-    {"currentPath"  (m/latest :path nav-flow)
-     "canGoBack"    (m/latest #(boolean (seq (:back %))) nav-flow)
-     "canGoForward" (m/latest #(boolean (seq (:forward %))) nav-flow)
-     "breadcrumbs"  (m/latest #(json/write-str (build-breadcrumbs (:path %))) nav-flow)}))
+    {"currentPath"       (m/latest :path nav-flow)
+     "canGoBack"         (m/latest #(boolean (seq (:back %))) nav-flow)
+     "canGoForward"      (m/latest #(boolean (seq (:forward %))) nav-flow)
+     "breadcrumbs"       (m/latest #(json/write-str (build-breadcrumbs (:path %))) nav-flow)
+     "millerActiveCount" (m/latest :active-count miller-flow)
+     "millerColumns"     (m/latest #(json/write-str
+                                      (mapv (fn [col]
+                                              {:name (:name col)
+                                               :path (:path col)
+                                               :selectedPath (or (:selected-path col) "")})
+                                            (:columns %)))
+                                   miller-flow)}))
 
 ;; File listing helpers
 
@@ -138,19 +148,6 @@
   "Return the keyword for miller column model at index i."
   [i]
   (keyword (str "mc" i)))
-
-(defn- push-miller-state!
-  "Push miller columns metadata to QML state."
-  [{:keys [columns active-count]}]
-  (let [cols-json (json/write-str
-                   (mapv (fn [col]
-                           {:name (:name col)
-                            :path (:path col)
-                            :selectedPath (or (:selected-path col) "")})
-                         columns))]
-    (state/update-state! assoc
-                         :millerActiveCount active-count
-                         :millerColumns cols-json)))
 
 (defn- populate-miller-model!
   "Fill miller column model at index i with directory contents.
@@ -210,8 +207,7 @@
             (clear-miller-model! i))
           ;; Update miller state
           (let [new-state {:columns columns-with-sel :active-count active-count}]
-            (reset! miller-state new-state)
-            (push-miller-state! new-state))
+            (reset! miller-state new-state))
           ;; Update nav path — reactive layer handles currentPath & breadcrumbs
           (swap! *nav assoc :path path)
           (cuirq/set-property! :itemCount (count (dirs/list-dir! path)))
@@ -262,7 +258,6 @@
                     new-columns (conj kept new-col)
                     new-state {:columns new-columns :active-count new-active}]
                 (reset! miller-state new-state)
-                (push-miller-state! new-state)
                 ;; Update nav path — reactive layer handles currentPath & breadcrumbs
                 (swap! *nav assoc :path item-path)
                 (cuirq/set-property! :itemCount (count (dirs/list-dir! item-path)))
@@ -279,8 +274,7 @@
                          (assoc-in [col-idx :selected-index] item-index)
                          (assoc-in [col-idx :selected-path] (:path item)))
                 new-state {:columns kept :active-count new-active}]
-            (reset! miller-state new-state)
-            (push-miller-state! new-state)))))))
+            (reset! miller-state new-state)))))))
 
 (defn- refresh-miller-column!
   "Re-read a specific miller column whose directory changed.
@@ -407,9 +401,7 @@
         ;; Initialize non-reactive state
         (println " [2/5] Initializing state...")
         (state/set-state! {:itemCount 0
-                           :viewMode "grid"
-                           :millerActiveCount 0
-                           :millerColumns "[]"})
+                           :viewMode "grid"})
 
         ;; Start reactive sync (currentPath, canGoBack, canGoForward, breadcrumbs)
         (println " [3/5] Starting reactive sync...")
