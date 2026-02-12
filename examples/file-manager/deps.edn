@@ -1,7 +1,8 @@
 {:paths ["src" "resources"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         org.clojure/data.json {:mvn/version "2.4.0"}
-        cuirq/cuirq {:local/root "../../clj"}}
+        cuirq/cuirq {:local/root "../../clj"}
+        missionary/missionary {:mvn/version "b.46"}}
 
  :aliases
  {:dev {:extra-deps {nrepl/nrepl {:mvn/version "1.0.0"}

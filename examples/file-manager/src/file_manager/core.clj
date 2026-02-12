@@ -1,15 +1,49 @@
 (ns file-manager.core
   (:require [cuirq.core :as cuirq]
             [cuirq.state :as state]
+            [cuirq.reactive :as reactive]
             [cuirq.models :as models]
             [file-manager.dirs :as dirs]
             [file-manager.tree :as tree]
+            [missionary.core :as m]
             [clojure.data.json :as json])
   (:import [java.io File])
   (:gen-class))
 
-;; Navigation history
-(defonce nav-history (atom {:back [] :forward []}))
+;; Navigation state (reactive — auto-synced to QML)
+
+(defonce *nav (atom {:path "" :back [] :forward []}))
+
+;; Pure navigation functions — no side effects, no QML push
+(defn nav-push
+  "Push current path to back stack, navigate to new path."
+  [nav path]
+  (-> nav
+      (update :back conj (:path nav))
+      (assoc :forward [] :path path)))
+
+(defn nav-back
+  "Pop from back stack, push current to forward."
+  [nav]
+  (let [prev (peek (:back nav))]
+    (-> nav
+        (update :back pop)
+        (update :forward conj (:path nav))
+        (assoc :path prev))))
+
+(defn nav-forward
+  "Pop from forward stack, push current to back."
+  [nav]
+  (let [next-p (peek (:forward nav))]
+    (-> nav
+        (update :forward pop)
+        (update :back conj (:path nav))
+        (assoc :path next-p))))
+
+;; Derived flows — auto-recomputed on *nav change
+(def nav-flow (m/watch *nav))
+
+;; Non-reactive state (stays as atoms)
 
 ;; Cache last flat listing to avoid redundant updates from FSEvents
 (defonce ^:private last-listing (atom nil))
@@ -31,10 +65,40 @@
 ;; Cache last data set on each miller model to avoid redundant updates
 (defonce ^:private last-miller-data (atom {}))
 
+;; Reactive sync setup
+
+(defn- build-breadcrumbs
+  [^String path]
+  (let [parts (->> (.split path (File/separator))
+                   (remove empty?))]
+    (loop [remaining parts
+           acc-path ""
+           result [{:name "/" :path "/"}]]
+      (if (empty? remaining)
+        result
+        (let [part (first remaining)
+              new-path (str acc-path "/" part)]
+          (recur (rest remaining)
+                 new-path
+                 (conj result {:name part :path new-path})))))))
+
+(defn start-reactive-sync!
+  "Start reactive auto-sync of nav-derived properties to QML.
+   Returns a cancel function."
+  []
+  (println "[reactive] Starting nav property sync...")
+  (reactive/sync-props!
+    {"currentPath"  (m/latest :path nav-flow)
+     "canGoBack"    (m/latest #(boolean (seq (:back %))) nav-flow)
+     "canGoForward" (m/latest #(boolean (seq (:forward %))) nav-flow)
+     "breadcrumbs"  (m/latest #(json/write-str (build-breadcrumbs (:path %))) nav-flow)}))
+
+;; File listing helpers
+
 (defn- refresh-file-list!
   "Rebuild the flat tree and push to model. Updates watcher paths."
   []
-  (let [current-path (:currentPath (state/get-state))
+  (let [current-path (:path @*nav)
         items (tree/build-flat-list current-path @sort-state)
         ;; Visible dirs = root + every expanded dir in the flat list
         visible-dirs (into #{current-path}
@@ -43,13 +107,15 @@
     (when (not= items @last-listing)
       (reset! last-listing items)
       (models/update-data! :files items "path")
-      (state/update-state! assoc :itemCount (count items)))
+      (cuirq/set-property! :itemCount (count items)))
     ;; Prune cache and watcher to only visible directories
     (dirs/retain-paths! visible-dirs)
     (let [paths (dirs/active-paths)]
       (if (seq paths)
         (cuirq/watch-directories! paths)
         (cuirq/stop-directory-watch!)))))
+
+;; Miller columns
 
 (defn- path->chain
   "Build a chain of directory paths from / to the given path.
@@ -72,21 +138,6 @@
   "Return the keyword for miller column model at index i."
   [i]
   (keyword (str "mc" i)))
-
-(defn- build-breadcrumbs
-  [^String path]
-  (let [parts (->> (.split path (File/separator))
-                   (remove empty?))]
-    (loop [remaining parts
-           acc-path ""
-           result [{:name "/" :path "/"}]]
-      (if (empty? remaining)
-        result
-        (let [part (first remaining)
-              new-path (str acc-path "/" part)]
-          (recur (rest remaining)
-                 new-path
-                 (conj result {:name part :path new-path})))))))
 
 (defn- push-miller-state!
   "Push miller columns metadata to QML state."
@@ -157,15 +208,13 @@
           ;; Clear unused models
           (doseq [i (range active-count miller-pool-size)]
             (clear-miller-model! i))
-          ;; Update state
+          ;; Update miller state
           (let [new-state {:columns columns-with-sel :active-count active-count}]
             (reset! miller-state new-state)
             (push-miller-state! new-state))
-          ;; Update currentPath & breadcrumbs to the navigated path
-          (state/update-state! assoc
-                               :currentPath path
-                               :breadcrumbs (json/write-str (build-breadcrumbs path))
-                               :itemCount (count (dirs/list-dir! path)))
+          ;; Update nav path — reactive layer handles currentPath & breadcrumbs
+          (swap! *nav assoc :path path)
+          (cuirq/set-property! :itemCount (count (dirs/list-dir! path)))
           ;; Watch visible directories
           (let [visible-dirs (set (map :path columns-with-sel))
                 paths (dirs/active-paths)
@@ -214,11 +263,9 @@
                     new-state {:columns new-columns :active-count new-active}]
                 (reset! miller-state new-state)
                 (push-miller-state! new-state)
-                ;; Update currentPath & breadcrumbs to the deepest directory
-                (state/update-state! assoc
-                                     :currentPath item-path
-                                     :breadcrumbs (json/write-str (build-breadcrumbs item-path))
-                                     :itemCount (count (dirs/list-dir! item-path)))
+                ;; Update nav path — reactive layer handles currentPath & breadcrumbs
+                (swap! *nav assoc :path item-path)
+                (cuirq/set-property! :itemCount (count (dirs/list-dir! item-path)))
                 ;; Update watcher
                 (let [visible-dirs (set (map :path new-columns))]
                   (dirs/retain-paths! visible-dirs)
@@ -245,43 +292,34 @@
         (when (= (:path col) changed-path)
           (populate-miller-model! i changed-path))))))
 
+;; ============================================================
+;; Navigation (simplified — no manual QML push for 4 reactive props)
+;; ============================================================
+
 (defn navigate-to!
   "Navigate to a directory path."
   [^String path]
   (let [dir (File. path)]
     (when (.isDirectory dir)
       (let [canonical (.getCanonicalPath dir)
-            current-path (:currentPath (state/get-state))]
-        ;; Push current path to back stack
-        (when (and current-path (not= current-path canonical))
-          (swap! nav-history (fn [h]
-                               (-> h
-                                   (update :back conj current-path)
-                                   (assoc :forward [])))))
+            current (:path @*nav)]
+        ;; Update nav state — reactive layer handles QML sync
+        (if (and (seq current) (not= current canonical))
+          (swap! *nav nav-push canonical)
+          (swap! *nav assoc :path canonical))
+        ;; Side effects per view mode
         (if (= @view-mode "columns")
-          ;; Miller columns mode
           (do
             (dirs/invalidate-all!)
             (miller-navigate-to! canonical)
-            (state/update-state! assoc
-                                 :currentPath canonical
-                                 :canGoBack (boolean (seq (:back @nav-history)))
-                                 :canGoForward (boolean (seq (:forward @nav-history)))
-                                 :breadcrumbs (json/write-str (build-breadcrumbs canonical))
-                                 :itemCount (count (dirs/list-dir! canonical))))
-          ;; Grid/list mode
+            (cuirq/set-property! :itemCount (count (dirs/list-dir! canonical))))
           (do
             (tree/collapse-all!)
             (dirs/invalidate-all!)
             (let [items (tree/build-flat-list canonical @sort-state)]
               (reset! last-listing items)
               (models/set-data! :files items)
-              (state/set-state!
-               {:currentPath  canonical
-                :canGoBack    (boolean (seq (:back @nav-history)))
-                :canGoForward (boolean (seq (:forward @nav-history)))
-                :itemCount    (count items)
-                :breadcrumbs  (json/write-str (build-breadcrumbs canonical))})
+              (cuirq/set-property! :itemCount (count items))
               (let [paths (dirs/active-paths)]
                 (if (seq paths)
                   (cuirq/watch-directories! paths)
@@ -289,35 +327,22 @@
 
 (defn go-back!
   []
-  (let [{:keys [back]} @nav-history]
+  (let [{:keys [back]} @*nav]
     (when (seq back)
-      (let [prev (peek back)
-            current (:currentPath (state/get-state))]
-        (swap! nav-history (fn [h]
-                             (-> h
-                                 (update :back pop)
-                                 (update :forward conj current))))
+      ;; Update nav state — reactive layer handles QML sync
+      (swap! *nav nav-back)
+      (let [prev (:path @*nav)]
         (dirs/invalidate-all!)
         (if (= @view-mode "columns")
           (do
             (miller-navigate-to! prev)
-            (state/update-state! assoc
-                                 :currentPath prev
-                                 :canGoBack (boolean (seq (:back @nav-history)))
-                                 :canGoForward (boolean (seq (:forward @nav-history)))
-                                 :breadcrumbs (json/write-str (build-breadcrumbs prev))
-                                 :itemCount (count (dirs/list-dir! prev))))
+            (cuirq/set-property! :itemCount (count (dirs/list-dir! prev))))
           (do
             (tree/collapse-all!)
             (let [items (tree/build-flat-list prev @sort-state)]
               (reset! last-listing items)
               (models/set-data! :files items)
-              (state/set-state!
-               {:currentPath  prev
-                :canGoBack    (boolean (seq (:back @nav-history)))
-                :canGoForward (boolean (seq (:forward @nav-history)))
-                :itemCount    (count items)
-                :breadcrumbs  (json/write-str (build-breadcrumbs prev))})
+              (cuirq/set-property! :itemCount (count items))
               (let [paths (dirs/active-paths)]
                 (if (seq paths)
                   (cuirq/watch-directories! paths)
@@ -325,39 +350,30 @@
 
 (defn go-forward!
   []
-  (let [{:keys [forward]} @nav-history]
+  (let [{:keys [forward]} @*nav]
     (when (seq forward)
-      (let [next-path (peek forward)
-            current (:currentPath (state/get-state))]
-        (swap! nav-history (fn [h]
-                             (-> h
-                                 (update :forward pop)
-                                 (update :back conj current))))
+      ;; Update nav state — reactive layer handles QML sync
+      (swap! *nav nav-forward)
+      (let [next-path (:path @*nav)]
         (dirs/invalidate-all!)
         (if (= @view-mode "columns")
           (do
             (miller-navigate-to! next-path)
-            (state/update-state! assoc
-                                 :currentPath next-path
-                                 :canGoBack (boolean (seq (:back @nav-history)))
-                                 :canGoForward (boolean (seq (:forward @nav-history)))
-                                 :breadcrumbs (json/write-str (build-breadcrumbs next-path))
-                                 :itemCount (count (dirs/list-dir! next-path))))
+            (cuirq/set-property! :itemCount (count (dirs/list-dir! next-path))))
           (do
             (tree/collapse-all!)
             (let [items (tree/build-flat-list next-path @sort-state)]
               (reset! last-listing items)
               (models/set-data! :files items)
-              (state/set-state!
-               {:currentPath  next-path
-                :canGoBack    (boolean (seq (:back @nav-history)))
-                :canGoForward (boolean (seq (:forward @nav-history)))
-                :itemCount    (count items)
-                :breadcrumbs  (json/write-str (build-breadcrumbs next-path))})
+              (cuirq/set-property! :itemCount (count items))
               (let [paths (dirs/active-paths)]
                 (if (seq paths)
                   (cuirq/watch-directories! paths)
                   (cuirq/start-directory-watch! next-path))))))))))
+
+;; ============================================================
+;; Helpers
+;; ============================================================
 
 (defn- resolve-sidebar-location
   [^String key]
@@ -371,6 +387,10 @@
       "music"     (str home "/Music")
       home)))
 
+;; ============================================================
+;; Main
+;; ============================================================
+
 (defn -main [& _args]
   (println "\n========================================")
   (println "cuirq File Manager")
@@ -379,24 +399,24 @@
   (try
     (cuirq/with-qt ["-platform" "cocoa"]
         ;; Create files model + miller column pool
-        (println " [1/4] Creating models...")
+        (println " [1/5] Creating models...")
         (models/create-model! :files)
         (doseq [i (range miller-pool-size)]
           (models/create-model! (miller-model-key i)))
 
-        ;; Initialize state
-        (println " [2/4] Initializing state...")
-        (state/set-state! {:currentPath ""
-                           :canGoBack "false"
-                           :canGoForward "false"
-                           :itemCount 0
-                           :breadcrumbs "[]"
+        ;; Initialize non-reactive state
+        (println " [2/5] Initializing state...")
+        (state/set-state! {:itemCount 0
                            :viewMode "grid"
                            :millerActiveCount 0
                            :millerColumns "[]"})
 
+        ;; Start reactive sync (currentPath, canGoBack, canGoForward, breadcrumbs)
+        (println " [3/5] Starting reactive sync...")
+        (start-reactive-sync!)
+
         ;; Register signal handlers
-        (println " [3/4] Registering signal handlers...")
+        (println " [4/5] Registering signal handlers...")
         (cuirq/on-signal! :navigate
                           (fn [_ json-args]
                             (let [args (json/read-str json-args)]
@@ -445,7 +465,7 @@
                           (fn [_ json-args]
                             (let [args (json/read-str json-args)
                                   mode (first args)
-                                  current-path (:currentPath (state/get-state))]
+                                  current-path (:path @*nav)]
                               (reset! view-mode mode)
                               (state/update-state! assoc :viewMode mode)
                               (when (and current-path (not= current-path ""))
@@ -457,7 +477,7 @@
                                       (let [items (tree/build-flat-list current-path @sort-state)]
                                         (reset! last-listing items)
                                         (models/set-data! :files items)
-                                        (state/update-state! assoc :itemCount (count items)))))))))
+                                        (cuirq/set-property! :itemCount (count items)))))))))
 
         (cuirq/on-signal! :themeChanged
                           (fn [_ json-args]
@@ -479,7 +499,7 @@
                                                    :sortAscending ascending))))
 
         ;; Load QML
-        (println " [4/4] Loading QML...")
+        (println " [5/5] Loading QML...")
         (cuirq/set-app-name! "cuirq File Manager")
         (let [qml-path (str (System/getProperty "user.dir") "/resources/file_manager.qml")]
           (when-not (cuirq/load-qml! qml-path)
