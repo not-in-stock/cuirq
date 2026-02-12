@@ -10,6 +10,7 @@ Rectangle {
         }
     }
 
+    property int selectedIndex: -1
     property string sortField: "name"
     property bool sortAscending: true
 
@@ -75,7 +76,9 @@ Rectangle {
             height: Theme.listItemHeight
             radius: 6
             clip: true
-            color: listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
+
+            readonly property bool isSelected: index === fileList.selectedIndex
+            color: isSelected ? Theme.selection : (listMouse.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
             Behavior on color {
                 ColorAnimation {
@@ -199,6 +202,7 @@ Rectangle {
                 id: listMouse
                 anchors.fill: parent
                 hoverEnabled: true
+                onClicked: signalForwarder.emitSignal("selectIndex", [index])
                 onDoubleClicked: {
                     if (model.isDir) {
                         signalForwarder.emitSignal("navigate", [model.path]);

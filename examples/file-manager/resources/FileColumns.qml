@@ -14,6 +14,7 @@ Rectangle {
                                 mc8, mc9, mc10, mc11, mc12, mc13, mc14, mc15]
     property int activeColumnCount: 0
     property var columnsInfo: []
+    property int selectedIndex: -1
 
     // Deferred removal: how many excess columns to remove after scroll animation
     property int _pendingRemoves: 0
@@ -47,6 +48,7 @@ Rectangle {
             columnName: name
             columnPath: path
             selectedChildPath: selectedPath
+            focusedIndex: (index === fileColumns.activeColumnCount - 1) ? fileColumns.selectedIndex : -1
         }
 
         add: Transition {

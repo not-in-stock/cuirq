@@ -9,6 +9,7 @@ Rectangle {
     property string columnPath: ""
     property string columnName: ""
     property string selectedChildPath: ""
+    property int focusedIndex: -1
 
     onColumnPathChanged: listView.contentY = -listView.topMargin
 
@@ -72,9 +73,10 @@ Rectangle {
             height: Theme.millerItemHeight
 
             readonly property bool isSelected: model.path === root.selectedChildPath
+            readonly property bool isFocused: index === root.focusedIndex
             readonly property bool isHovered: delegateMouse.containsMouse
 
-            color: isSelected ? Theme.millerSelection : (isHovered ? Theme.surfaceHover : Theme.surfaceHoverOff)
+            color: isSelected ? Theme.millerSelection : (isFocused ? Theme.selection : (isHovered ? Theme.surfaceHover : Theme.surfaceHoverOff))
 
             Behavior on color {
                 ColorAnimation {

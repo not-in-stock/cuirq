@@ -20,6 +20,36 @@ Item {
     property bool sortAscending: true
     property int millerActiveCount: 0
     property var millerColumns: []
+    property int selectedIndex: -1
+
+    // Grid column count (mirrors FileGrid calculation)
+    readonly property real _gridAvailableWidth: Math.max(Theme.gridMinCellWidth, root.width - Theme.sidebarWidth)
+    readonly property int _gridColumns: Math.max(1, Math.floor(_gridAvailableWidth / Theme.gridMinCellWidth))
+
+    function _qtKeyToString(key, text) {
+        switch (key) {
+        case Qt.Key_Up:      return "Up";
+        case Qt.Key_Down:    return "Down";
+        case Qt.Key_Left:    return "Left";
+        case Qt.Key_Right:   return "Right";
+        case Qt.Key_Return:  return "Return";
+        case Qt.Key_Enter:   return "Return";
+        case Qt.Key_Escape:  return "Escape";
+        case Qt.Key_Tab:     return "Tab";
+        case Qt.Key_Backspace: return "Backspace";
+        case Qt.Key_Space:   return "Space";
+        case Qt.Key_Home:    return "Home";
+        case Qt.Key_End:     return "End";
+        case Qt.Key_PageUp:  return "PageUp";
+        case Qt.Key_PageDown: return "PageDown";
+        case Qt.Key_BracketLeft:  return "[";
+        case Qt.Key_BracketRight: return "]";
+        case Qt.Key_1:       return "1";
+        case Qt.Key_2:       return "2";
+        case Qt.Key_3:       return "3";
+        default:             return text;
+        }
+    }
 
     function applyState(key, value) {
         if (key === "currentPath")
@@ -48,7 +78,10 @@ Item {
             } catch (e) {
                 root.millerColumns = [];
             }
-        }
+        } else if (key === "viewMode")
+            root.viewMode = value;
+        else if (key === "selectedIndex")
+            root.selectedIndex = parseInt(value) ?? -1;
     }
 
     Connections {
@@ -58,18 +91,36 @@ Item {
         }
     }
 
-    RowLayout {
+    FocusScope {
         anchors.fill: parent
-        spacing: 0
+        focus: true
 
-        Sidebar {
-            Layout.fillHeight: true
-            currentPath: root.currentPath
+        Keys.onPressed: function(event) {
+            let hasText = event.text.length > 0 && event.text.charCodeAt(0) > 31;
+            let modifiers = [];
+            if (event.modifiers & Qt.ControlModifier) modifiers.push("Cmd");
+            // Only add Shift for non-printable keys — for letters, case already encodes shift
+            if ((event.modifiers & Qt.ShiftModifier) && !hasText) modifiers.push("Shift");
+            let keyStr = modifiers.length > 0
+                ? modifiers.join("+") + "+" + root._qtKeyToString(event.key, event.text)
+                : root._qtKeyToString(event.key, event.text);
+            if (keyStr === "") return;
+            signalForwarder.emitSignal("keyPress", [keyStr, root._gridColumns]);
+            event.accepted = true;
         }
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
+        RowLayout {
+            anchors.fill: parent
+            spacing: 0
+
+            Sidebar {
+                Layout.fillHeight: true
+                currentPath: root.currentPath
+            }
+
+            Item {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
 
             // Content area — extends behind toolbar and status bar
             Rectangle {
@@ -86,6 +137,7 @@ Item {
                 FileGrid {
                     id: gridView
                     anchors.fill: parent
+                    selectedIndex: root.selectedIndex
                     visible: root.viewMode === "grid"
                     opacity: 0
                     transform: Translate {
@@ -97,6 +149,7 @@ Item {
                 FileList {
                     id: listView
                     anchors.fill: parent
+                    selectedIndex: root.selectedIndex
                     sortField: root.sortField
                     sortAscending: root.sortAscending
                     visible: root.viewMode === "list"
@@ -112,6 +165,7 @@ Item {
                     anchors.fill: parent
                     activeColumnCount: root.millerActiveCount
                     columnsInfo: root.millerColumns
+                    selectedIndex: root.selectedIndex
                     visible: root.viewMode === "columns"
                     opacity: 0
                     transform: Translate {
@@ -308,7 +362,8 @@ Item {
                 currentPath: root.currentPath
             }
         }
-    }
+        }
+    }   // FocusScope
 
     component ColumnHeader: Item {
         id: colHeader

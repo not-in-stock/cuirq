@@ -24,7 +24,8 @@
       ;; Initialize non-reactive state
       (println " [2/5] Initializing state...")
       (state/set-state! {:itemCount 0
-                         :viewMode "grid"})
+                         :viewMode "grid"
+                         :selectedIndex -1})
 
       ;; Start reactive sync (currentPath, canGoBack, canGoForward, breadcrumbs)
       (println " [3/5] Starting reactive sync...")

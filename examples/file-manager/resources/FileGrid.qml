@@ -10,6 +10,8 @@ Rectangle {
         }
     }
 
+    property int selectedIndex: -1
+
     readonly property real _availableWidth: Math.max(Theme.gridMinCellWidth, gridView.width)
     readonly property int _columns: Math.max(1, Math.floor(_availableWidth / Theme.gridMinCellWidth))
 
@@ -42,6 +44,8 @@ Rectangle {
                 isDir: model.isDir
                 fileSize: model.size
                 fileType: model.fileType
+                isSelected: index === fileGrid.selectedIndex
+                onClicked: signalForwarder.emitSignal("selectIndex", [index])
             }
         }
 

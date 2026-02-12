@@ -10,6 +10,8 @@
 
 (defonce *sort-state (atom {:field "name" :ascending true}))
 
+(defonce *selected-index (atom -1))
+
 (defonce *last-listing (atom nil))
 
 (defn- refresh-watcher!

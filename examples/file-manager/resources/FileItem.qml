@@ -8,11 +8,14 @@ Rectangle {
     property bool isDir: false
     property string fileSize: ""
     property string fileType: "other"
+    property bool isSelected: false
+
+    signal clicked()
 
     width: 100
     height: 110
     radius: 8
-    color: mouseArea.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff
+    color: isSelected ? Theme.selection : (mouseArea.containsMouse ? Theme.surfaceHover : Theme.surfaceHoverOff)
 
     Behavior on color {
         ColorAnimation {
@@ -81,6 +84,7 @@ Rectangle {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
+        onClicked: fileItem.clicked()
         onDoubleClicked: {
             if (fileItem.isDir) {
                 signalForwarder.emitSignal("navigate", [fileItem.filePath]);
