@@ -199,6 +199,8 @@
                          "-M:run:bridge"))))}
 
   ;; Build native binary with GraalVM native-image
+  ;; Generates interactive HTML build report for size analysis (Oracle GraalVM only)
+  ;; https://github.com/clj-easy/graal-docs#visualize-what-is-in-your-native-image
   native
   {:doc "Build native binary: bb native <example-name>"
    :requires ([babashka.fs :as fs]
@@ -225,7 +227,8 @@
                  config-dir (str project-root "/config")
                  lib-path (str project-root "/build/lib")
                  output-dir (str project-root "/build/native")
-                 output-bin (str output-dir "/cuirq-" example)]
+                 output-bin (str output-dir "/cuirq-" example)
+                 report-path (str output-bin "-report.html")]
              (when-not (fs/exists? aot-dir)
                (println "AOT classes not found. Run 'bb aot " example "' first.")
                (System/exit 1))
@@ -248,6 +251,7 @@
                            "-H:+ForeignAPISupport "
                            "--enable-native-access=ALL-UNNAMED "
                            "--features=clj_easy.graal_build_time.InitClojureClasses "
+                           "--emit build-report=" report-path " "
                            "-Djava.library.path=" lib-path " "
                            "-cp " full-cp " "
                            "-o " output-bin " "
@@ -256,7 +260,8 @@
                (println "")
                (println (str "Native binary built: " output-bin))
                (let [size-mb (/ (fs/size (str output-bin)) 1048576.0)]
-                 (println (str "Size: " (format "%.1f" size-mb) " MB"))))))}
+                 (println (str "Size: " (format "%.1f" size-mb) " MB"))
+                 (println (str "Build report: " report-path))))))}
 
   ;; Run native binary
   run-native
