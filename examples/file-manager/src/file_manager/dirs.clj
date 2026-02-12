@@ -6,7 +6,7 @@
            [java.util Date]))
 
 ;; Directory cache: {path → [items]}
-(defonce !dir-cache (atom {}))
+(defonce *dir-cache (atom {}))
 
 (def ^:private ^SimpleDateFormat date-fmt
   (SimpleDateFormat. "dd.MM.yyyy"))
@@ -77,7 +77,7 @@
    Optional sort-fn applies to the File objects before mapping."
   ([^String path] (list-dir! path nil))
   ([^String path sort-fn]
-   (if-let [cached (get @!dir-cache path)]
+   (if-let [cached (get @*dir-cache path)]
      cached
      (let [dir (File. path)
            children (some-> (.listFiles dir) seq)
@@ -85,25 +85,25 @@
                    (filter #(not (.isHidden ^File %))
                            (or children [])))
            items (mapv file->map sorted)]
-       (swap! !dir-cache assoc path items)
+       (swap! *dir-cache assoc path items)
        items))))
 
 (defn invalidate!
   "Remove a specific path from the cache."
   [path]
-  (swap! !dir-cache dissoc path))
+  (swap! *dir-cache dissoc path))
 
 (defn invalidate-all!
   "Clear the entire directory cache."
   []
-  (reset! !dir-cache {}))
+  (reset! *dir-cache {}))
 
 (defn retain-paths!
   "Prune cache to only keep the given set of paths."
   [paths-to-keep]
-  (swap! !dir-cache select-keys paths-to-keep))
+  (swap! *dir-cache select-keys paths-to-keep))
 
 (defn active-paths
   "Return all currently cached directory paths."
   []
-  (keys @!dir-cache))
+  (keys @*dir-cache))

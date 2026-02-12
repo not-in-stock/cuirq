@@ -3,23 +3,23 @@
   (:require [file-manager.dirs :as dirs]))
 
 ;; Set of expanded directory paths
-(defonce !expanded (atom #{}))
+(defonce *expanded (atom #{}))
 
 (defn toggle! [path]
-  (swap! !expanded
+  (swap! *expanded
          (fn [s] (if (contains? s path) (disj s path) (conj s path)))))
 
 (defn expand! [path]
-  (swap! !expanded conj path))
+  (swap! *expanded conj path))
 
 (defn collapse! [path]
-  (swap! !expanded disj path))
+  (swap! *expanded disj path))
 
 (defn collapse-all! []
-  (reset! !expanded #{}))
+  (reset! *expanded #{}))
 
 (defn expanded? [path]
-  (contains? @!expanded path))
+  (contains? @*expanded path))
 
 (defn- sort-items
   "Sort items according to sort-state: dirs first, then by field.
@@ -42,7 +42,7 @@
    that are in the expanded set. Each item gets :depth, :expanded, :hasChildren."
   ([root-path] (build-flat-list root-path nil))
   ([root-path sort-state]
-   (let [expanded @!expanded]
+   (let [expanded @*expanded]
      (letfn [(walk [path depth]
                (let [items (dirs/list-dir! path)
                      sorted (if sort-state (sort-items items sort-state) items)]
