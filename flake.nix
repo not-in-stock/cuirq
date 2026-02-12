@@ -75,6 +75,7 @@
           ripgrep # Fast code search
           jq # JSON processing
           clojure-lsp # Clojure language server
+          clj-kondo # Clojure linter
           babashka # Task runner for Clojure
           qt6.qtdeclarative # qmlformat, qmllint, qmlls
         ];

@@ -1,0 +1,15 @@
+{:linters {:unused-namespace {:level :warning}
+           :unused-binding {:level :warning}
+           :unused-referred-var {:level :warning}
+           :unresolved-symbol {:level :error}
+           :unresolved-namespace {:level :error}
+           :missing-docstring {:level :off}
+           :single-operand-comparison {:level :warning}
+           :unsorted-required-namespaces {:level :off}}
+
+ :lint-as {missionary.core/? clojure.core/deref
+           missionary.core/?> clojure.core/deref
+           missionary.core/?< clojure.core/deref
+           missionary.core/sp clojure.core/do
+           missionary.core/ap clojure.core/do
+           missionary.core/cp clojure.core/do}}

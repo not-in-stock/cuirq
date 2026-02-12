@@ -88,6 +88,11 @@
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
                          "-M:run:bridge"))))}
 
+  ;; Clojure linting
+  lint
+  {:doc "Lint Clojure sources with clj-kondo"
+   :task (shell "clj-kondo --lint clj/src examples/counter/src examples/file-manager/src")}
+
   ;; QML tooling
   lint-qml
   {:doc "Lint QML files for file-manager example"

@@ -23,7 +23,8 @@ out/
 .cpcache/
 .nrepl-port
 .lsp/
-.clj-kondo/
+.clj-kondo/.cache/
+.clj-kondo/imports/
 
 # Java
 *.class
