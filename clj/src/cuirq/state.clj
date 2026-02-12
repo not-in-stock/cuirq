@@ -2,8 +2,7 @@
   "State management for REPL-driven development.
    This namespace provides a simple atom-based state management system
    that automatically syncs to QML context properties."
-  (:require [cuirq.core :as cuirq]
-            [clojure.string :as str]))
+  (:require [cuirq.core :as cuirq]))
 
 (defonce ^:private app-state (atom {}))
 
