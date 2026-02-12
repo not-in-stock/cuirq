@@ -90,6 +90,5 @@
 
   ;; Watch state changes
   (watch-state! :logger
-    (fn [_ _ old new]
-      (println "Changed:" old "->" new)))
-  )
+                (fn [_ _ old new]
+                  (println "Changed:" old "->" new))))

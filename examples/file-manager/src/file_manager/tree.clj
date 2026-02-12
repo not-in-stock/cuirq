@@ -52,9 +52,9 @@
                           item-path (:path item)
                           is-expanded (and is-dir (contains? expanded item-path))
                           enriched (assoc item
-                                         :depth depth
-                                         :expanded is-expanded
-                                         :hasChildren is-dir)]
+                                          :depth depth
+                                          :expanded is-expanded
+                                          :hasChildren is-dir)]
                       (if is-expanded
                         (into (conj acc enriched) (walk item-path (inc depth)))
                         (conj acc enriched))))

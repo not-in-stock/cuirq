@@ -72,19 +72,19 @@
                              :selected-index -1})
                           window)
             columns-with-sel
-              (vec (map-indexed
-                    (fn [i col]
-                      (if (< (inc i) active-count)
-                        (let [next-path (:path (nth columns (inc i)))
-                              items (dirs/list-dir! (:path col))
-                              idx (or (first (keep-indexed
-                                              (fn [j item]
-                                                (when (= (:path item) next-path) j))
-                                              items))
-                                      -1)]
-                          (assoc col :selected-index idx :selected-path next-path))
-                        col))
-                    columns))]
+            (vec (map-indexed
+                  (fn [i col]
+                    (if (< (inc i) active-count)
+                      (let [next-path (:path (nth columns (inc i)))
+                            items (dirs/list-dir! (:path col))
+                            idx (or (first (keep-indexed
+                                            (fn [j item]
+                                              (when (= (:path item) next-path) j))
+                                            items))
+                                    -1)]
+                        (assoc col :selected-index idx :selected-path next-path))
+                      col))
+                  columns))]
         (doseq [i (range active-count)]
           (populate-model! i (:path (nth columns-with-sel i))))
         (doseq [i (range active-count pool-size)]

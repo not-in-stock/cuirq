@@ -30,9 +30,9 @@
   (let [cancels (mapv (fn [[prop-name flow]]
                         (let [prev (volatile! ::none)]
                           (subscribe! flow
-                            (fn [v]
-                              (when (not= v @prev)
-                                (vreset! prev v)
-                                (cuirq/set-property! prop-name v))))))
+                                      (fn [v]
+                                        (when (not= v @prev)
+                                          (vreset! prev v)
+                                          (cuirq/set-property! prop-name v))))))
                       prop-flow-map)]
     (fn [] (doseq [c cancels] (c)))))

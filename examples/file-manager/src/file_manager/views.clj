@@ -12,6 +12,15 @@
 
 (defonce *last-listing (atom nil))
 
+(defn- refresh-watcher!
+  "Update directory watcher to match currently visible dirs."
+  [visible-dirs]
+  (dirs/retain-paths! visible-dirs)
+  (let [paths (dirs/active-paths)]
+    (if (seq paths)
+      (cuirq/watch-directories! paths)
+      (cuirq/stop-directory-watch!))))
+
 (defn refresh-file-list!
   "Rebuild the flat tree and push to model. Updates watcher paths."
   []
@@ -24,8 +33,16 @@
       (reset! *last-listing items)
       (models/update-data! :files items "path")
       (cuirq/set-property! :itemCount (count items)))
-    (dirs/retain-paths! visible-dirs)
-    (let [paths (dirs/active-paths)]
-      (if (seq paths)
-        (cuirq/watch-directories! paths)
-        (cuirq/stop-directory-watch!)))))
+    (refresh-watcher! visible-dirs)))
+
+(defn navigate-flat!
+  "Full flat-view navigation: collapse tree, invalidate caches,
+   rebuild file list, update model + itemCount, set watcher."
+  [^String path]
+  (tree/collapse-all!)
+  (dirs/invalidate-all!)
+  (let [items (tree/build-flat-list path @*sort-state)]
+    (reset! *last-listing items)
+    (models/set-data! :files items)
+    (cuirq/set-property! :itemCount (count items))
+    (refresh-watcher! #{path})))

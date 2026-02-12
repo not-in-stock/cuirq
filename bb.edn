@@ -88,7 +88,15 @@
                          "-Sdeps '{:aliases {:bridge {:extra-paths [\"" classes-path "\"]}}}' "
                          "-M:run:bridge"))))}
 
-  ;; Clojure linting
+  ;; Clojure tooling
+  fmt
+  {:doc "Format Clojure sources with cljfmt"
+   :task (shell "cljfmt fix clj/src examples/counter/src examples/file-manager/src")}
+
+  fmt-check
+  {:doc "Check Clojure formatting (no changes)"
+   :task (shell "cljfmt check clj/src examples/counter/src examples/file-manager/src")}
+
   lint
   {:doc "Lint Clojure sources with clj-kondo"
    :task (shell "clj-kondo --lint clj/src examples/counter/src examples/file-manager/src")}

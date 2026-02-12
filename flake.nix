@@ -76,6 +76,7 @@
           jq # JSON processing
           clojure-lsp # Clojure language server
           clj-kondo # Clojure linter
+          cljfmt # Clojure formatter
           babashka # Task runner for Clojure
           qt6.qtdeclarative # qmlformat, qmllint, qmlls
         ];

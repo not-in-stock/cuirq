@@ -61,16 +61,16 @@
         is-dir (.isDirectory f)
         ext (when-not is-dir (extension name))
         modified (.lastModified f)]
-    {:name              name
-     :path              (.getAbsolutePath f)
-     :isDir             is-dir
-     :size              (if is-dir "" (format-size (.length f)))
-     :sizeBytes         (if is-dir 0 (.length f))
-     :modified          modified
+    {:name name
+     :path (.getAbsolutePath f)
+     :isDir is-dir
+     :size (if is-dir "" (format-size (.length f)))
+     :sizeBytes (if is-dir 0 (.length f))
+     :modified modified
      :modifiedFormatted (format-date modified)
-     :extension         (or ext "")
-     :fileType          (if is-dir "folder" (file-type ext))
-     :typeLabel         (if is-dir "Folder" (if ext (.toUpperCase ^String ext) ""))}))
+     :extension (or ext "")
+     :fileType (if is-dir "folder" (file-type ext))
+     :typeLabel (if is-dir "Folder" (if ext (.toUpperCase ^String ext) ""))}))
 
 (defn list-dir!
   "List contents of a directory. Returns cached result if available.
