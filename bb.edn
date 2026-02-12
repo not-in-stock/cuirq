@@ -239,6 +239,28 @@
                (let [size-mb (/ (fs/size (str output-bin)) 1048576.0)]
                  (println (str "Size: " (format "%.1f" size-mb) " MB"))))))}
 
+  ;; Run native binary
+  run-native
+  {:doc "Run native binary: bb run-native <example-name>"
+   :requires ([babashka.fs :as fs])
+   :task (let [example (or (first *command-line-args*) "counter")
+               example-dir (str "examples/" example)
+               project-root (System/getProperty "user.dir")
+               bin-path (str project-root "/build/native/cuirq-" example)
+               lib-path (str project-root "/build/lib")]
+           (when-not (fs/exists? bin-path)
+             (println (str "Native binary not found: " bin-path))
+             (println (str "Run 'bb native " example "' first."))
+             (System/exit 1))
+           (when-not (fs/exists? example-dir)
+             (println (str "Error: Example '" example "' not found"))
+             (System/exit 1))
+           (println (str "Running native " example "..."))
+           (println "")
+           (shell {:dir example-dir
+                   :extra-env {"DYLD_LIBRARY_PATH" lib-path}}
+                  bin-path))}
+
   ;; Create macOS .app bundle
   bundle
   {:doc "Create macOS .app bundle: bb bundle <example-name>"
