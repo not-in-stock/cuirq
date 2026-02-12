@@ -85,9 +85,9 @@ Key principles:
 (ns counter.core
   (:require [cuirq.state :as state]))
 
-(def !app (state/create-store {:count 0}))
-(state/watch! !app :qt #(qt/set-property "count" (:count %)))
-(state/update! !app update :count inc)
+(def *app (state/create-store {:count 0}))
+(state/watch! *app :qt #(qt/set-property "count" (:count %)))
+(state/update! *app update :count inc)
 
 ;; Complex application — add reactive layer
 (ns complex-app.core
@@ -95,14 +95,14 @@ Key principles:
             [cuirq.state.reactive :as r]
             [missionary.core :as m]))
 
-(def !app (state/create-store {:items [] :filter :all}))
+(def *app (state/create-store {:items [] :filter :all}))
 
 ;; Derived flow — just m/latest, no registry
 (def filtered-items
   (m/latest
     (fn [{:keys [items filter]}]
       (into [] (r/filter-xf filter) items))
-    (m/watch !app)))
+    (m/watch *app)))
 
 ;; Auto-sync to QML — replaces manual state pushes
 (r/sync-state! {:itemCount (m/latest count filtered-items)})
@@ -131,8 +131,8 @@ Base layer without external dependencies. Sufficient for simple applications.
 
 (defn update!
   "Updates state with a function.
-   (update! !store assoc :loading true)
-   (update! !store update :count inc)"
+   (update! *store assoc :loading true)
+   (update! *store update :count inc)"
   [store f & args]
   (apply swap! store f args))
 
@@ -141,7 +141,7 @@ Base layer without external dependencies. Sufficient for simple applications.
 
 (defn update-in!
   "Updates value at path.
-   (update-in! !store [:windows win-id :path] (constantly new-path))"
+   (update-in! *store [:windows win-id :path] (constantly new-path))"
   [store path f & args]
   (apply swap! store update-in path f args))
 
@@ -158,9 +158,9 @@ Base layer without external dependencies. Sufficient for simple applications.
 ;; Selectors (simple, no caching)
 (defn select
   "Extracts value from state.
-   (select !app :count)
-   (select !app [:user :name])
-   (select !app #(filter :active (:items %)))"
+   (select *app :count)
+   (select *app [:user :name])
+   (select *app #(filter :active (:items %)))"
   [store selector]
   (let [state @store]
     (cond
@@ -191,11 +191,11 @@ Single atom with global/per-window decomposition. Cross-window ops (drag-and-dro
 
 ;; Window-scoped flow — recalculates only when this window's slice changes
 (defn window-flow [win-id key]
-  (m/latest #(get-in % [:windows win-id key]) (m/watch !app)))
+  (m/latest #(get-in % [:windows win-id key]) (m/watch *app)))
 
 ;; Global flow
 (defn global-flow [key]
-  (m/latest #(get-in % [:global key]) (m/watch !app)))
+  (m/latest #(get-in % [:global key]) (m/watch *app)))
 
 ;; Pure navigation — one function, not three
 (defn navigate [state win-id path]
@@ -242,9 +242,9 @@ Optional missionary layer. No registries — flows are plain functions composed 
 
 (defn derive
   "Creates a derived flow from store.
-   (derive !store :items)
-   (derive !store :items (filter :active))
-   (derive !store :items (comp (filter :active) (take 10)))"
+   (derive *store :items)
+   (derive *store :items (filter :active))
+   (derive *store :items (comp (filter :active) (take 10)))"
   ([store selector]
    (let [f (if (keyword? selector) selector selector)]
      (m/latest f (m/watch store))))
@@ -338,7 +338,7 @@ Optional missionary layer. No registries — flows are plain functions composed 
    (go
      (let [user (m/? (fetch-user id))
            items (m/? (fetch-items (:id user)))]
-       (state/update! !store assoc :user user :items items)))"
+       (state/update! *store assoc :user user :items items)))"
   [& body]
   `(let [task# (m/sp ~@body)]
      (task# (fn [_#]) (fn [e#] (println "async error:" e#)))))
@@ -482,9 +482,9 @@ Concrete before/after showing how the declarative layer eliminates imperative gl
       (assoc-in  [:windows win-id :selection] #{})))
 
 ;; Signal handlers — just swap!, no manual pushes
-(cuirq/on-signal! :navigate  #(state/update! !app navigate win-id %))
-(cuirq/on-signal! :goBack    #(state/update! !app go-back win-id))
-(cuirq/on-signal! :goForward #(state/update! !app go-forward win-id))
+(cuirq/on-signal! :navigate  #(state/update! *app navigate win-id %))
+(cuirq/on-signal! :goBack    #(state/update! *app go-back win-id))
+(cuirq/on-signal! :goForward #(state/update! *app go-forward win-id))
 
 ;; Derived flows — auto-recomputed on state change
 (def path-flow       (window-flow win-id :path))
